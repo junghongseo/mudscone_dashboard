@@ -216,10 +216,10 @@ export const RevenueLedger: React.FC<RevenueLedgerProps> = ({
             </div>
           </div>
 
-          {/* Structured Brand Cards Grid (3 Active Brand Cards) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Structured Brand Cards Grid (3 Active Brand Cards - Top Aligned) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
             {/* Brand Card 1: Mud Scone */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-amber-500/30 space-y-3 flex flex-col justify-between">
+            <div className="p-4 rounded-xl bg-slate-900/70 border border-amber-500/30 space-y-3 flex flex-col justify-start">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
                   <span>🧁</span> 머드스콘
@@ -260,7 +260,7 @@ export const RevenueLedger: React.FC<RevenueLedgerProps> = ({
             </div>
 
             {/* Brand Card 2: Oatter */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-yellow-500/30 space-y-3 flex flex-col justify-between">
+            <div className="p-4 rounded-xl bg-slate-900/70 border border-yellow-500/30 space-y-3 flex flex-col justify-start">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span className="text-xs font-bold text-yellow-400 flex items-center gap-1.5">
                   <span>🌾</span> 오터 (Oatter)
@@ -292,7 +292,7 @@ export const RevenueLedger: React.FC<RevenueLedgerProps> = ({
             </div>
 
             {/* Brand Card 3: Wysh */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-emerald-500/30 space-y-3 flex flex-col justify-between">
+            <div className="p-4 rounded-xl bg-slate-900/70 border border-emerald-500/30 space-y-3 flex flex-col justify-start">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
                   <span>✨</span> 위시 (Wysh)

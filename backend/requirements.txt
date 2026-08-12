@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-multipart
+openpyxl
+google-genai>=2.0.0
+supabase
+python-dotenv

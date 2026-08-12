@@ -53,5 +53,9 @@ dist-ssr/
 
 # Environment variables
 .env
+.env.*
+*.env
+**/.env
+backend/.env
 .env.local
 .env.*.local

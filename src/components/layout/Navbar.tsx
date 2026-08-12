@@ -21,6 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'oatter', name: '오터' },
     { id: 'wysh', name: '위시' },
     { id: 'ledger', name: '매출 장부' },
+    { id: 'vat', name: '부가세 신고' },
   ];
 
   return (

@@ -1,4 +1,4 @@
-export type BrandId = 'overview' | 'mudscone' | 'oatter' | 'wysh' | 'ledger';
+export type BrandId = 'overview' | 'mudscone' | 'oatter' | 'wysh' | 'ledger' | 'vat';
 
 export type ERRCQuadrant = 'E' | 'R_reduce' | 'R_raise' | 'C';
 

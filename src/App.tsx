@@ -8,7 +8,7 @@ import { RevenueTracker } from './components/revenue/RevenueTracker';
 import { YoYRevenueChart } from './components/revenue/YoYRevenueChart';
 import { RevenueLedger } from './components/revenue/RevenueLedger';
 import { OverviewDashboard } from './components/overview/OverviewDashboard';
-import { isSupabaseConfigured } from './lib/supabase';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 const STRATEGY_STORAGE_KEY = 'mudscone_dashboard_strategy_v5';
 const REVENUE_RECORDS_KEY = 'mudscone_revenue_records_v1';
@@ -45,11 +45,56 @@ export const App: React.FC = () => {
   // Save to local storage on change
   useEffect(() => {
     localStorage.setItem(STRATEGY_STORAGE_KEY, JSON.stringify(brandDataMap));
+
+    const client = supabase;
+    if (isSupabaseConfigured && client) {
+      Object.entries(brandDataMap).forEach(([bId, bData]) => {
+        client.from('brand_strategies').upsert({ id: bId, data: bData }).then();
+      });
+    }
   }, [brandDataMap]);
 
   useEffect(() => {
     localStorage.setItem(REVENUE_RECORDS_KEY, JSON.stringify(revenueRecords));
   }, [revenueRecords]);
+
+  // Initial Sync from Supabase on mount
+  useEffect(() => {
+    const client = supabase;
+    if (!isSupabaseConfigured || !client) return;
+
+    const syncFromSupabase = async () => {
+      try {
+        const { data: stratRows } = await client.from('brand_strategies').select('*');
+        if (stratRows && stratRows.length > 0) {
+          const loadedMap: any = { ...brandDataMap };
+          stratRows.forEach((row: any) => {
+            if (row.id && row.data) {
+              loadedMap[row.id] = row.data;
+            }
+          });
+          setBrandDataMap(loadedMap);
+        } else {
+          for (const [bId, bData] of Object.entries(INITIAL_BRAND_DATA)) {
+            await client.from('brand_strategies').upsert({ id: bId, data: bData });
+          }
+        }
+
+        const { data: revRows } = await client.from('revenue_records').select('*');
+        if (revRows && revRows.length > 0) {
+          setRevenueRecords(revRows as DailyRevenueRecord[]);
+        } else if (REVENUE_HISTORY_DATA && REVENUE_HISTORY_DATA.length > 0) {
+          for (const rec of REVENUE_HISTORY_DATA) {
+            await client.from('revenue_records').upsert(rec);
+          }
+        }
+      } catch (err) {
+        console.error('Supabase sync error:', err);
+      }
+    };
+
+    syncFromSupabase();
+  }, []);
 
   // Dynamically Sync currentAmount from revenueRecords for target year
   const syncedBrandDataMap = useMemo(() => {
@@ -77,7 +122,7 @@ export const App: React.FC = () => {
   }, [brandDataMap, revenueRecords]);
 
   // Current active brand data helper
-  const currentBrandId = activeTab === 'overview' || activeTab === 'ledger' ? 'mudscone' : activeTab;
+  const currentBrandId: 'mudscone' | 'oatter' | 'wysh' = (activeTab === 'mudscone' || activeTab === 'oatter' || activeTab === 'wysh') ? activeTab : 'mudscone';
   const currentBrandData = syncedBrandDataMap[currentBrandId];
 
   // Handler: Save or Update Revenue Record
@@ -94,11 +139,21 @@ export const App: React.FC = () => {
       }
       return updated;
     });
+
+    const client = supabase;
+    if (isSupabaseConfigured && client) {
+      client.from('revenue_records').upsert(record).then();
+    }
   };
 
   // Handler: Delete Revenue Record
   const handleDeleteRevenueRecord = (date: string) => {
     setRevenueRecords((prev) => prev.filter((r) => r.date !== date));
+
+    const client = supabase;
+    if (isSupabaseConfigured && client) {
+      client.from('revenue_records').delete().eq('date', date).then();
+    }
   };
 
   // Handler: Add ERRC Item
@@ -341,7 +396,7 @@ export const App: React.FC = () => {
 
             {/* Brand Daily YoY Revenue Comparison & Channel Breakdown Chart */}
             <YoYRevenueChart
-              brandId={activeTab}
+              brandId={activeTab === 'mudscone' || activeTab === 'oatter' || activeTab === 'wysh' ? activeTab : 'mudscone'}
               brandName={`${currentBrandData.name}`}
               showChannels={true}
             />

@@ -8,6 +8,7 @@ import { RevenueTracker } from './components/revenue/RevenueTracker';
 import { YoYRevenueChart } from './components/revenue/YoYRevenueChart';
 import { RevenueLedger } from './components/revenue/RevenueLedger';
 import { OverviewDashboard } from './components/overview/OverviewDashboard';
+import { VatReportApp } from './components/vat/VatReportApp';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 const STRATEGY_STORAGE_KEY = 'mudscone_dashboard_strategy_v5';
@@ -363,6 +364,8 @@ export const App: React.FC = () => {
             onSaveRecord={handleSaveRevenueRecord}
             onDeleteRecord={handleDeleteRevenueRecord}
           />
+        ) : activeTab === 'vat' ? (
+          <VatReportApp />
         ) : (
           <div className="space-y-6">
             {/* Brand Header Banner */}

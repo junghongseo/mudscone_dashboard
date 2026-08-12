@@ -216,8 +216,8 @@ export const RevenueLedger: React.FC<RevenueLedgerProps> = ({
             </div>
           </div>
 
-          {/* Structured Brand Cards Grid (4 Brand Cards) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Structured Brand Cards Grid (3 Active Brand Cards) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Brand Card 1: Mud Scone */}
             <div className="p-4 rounded-xl bg-slate-900/70 border border-amber-500/30 space-y-3 flex flex-col justify-between">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -309,29 +309,6 @@ export const RevenueLedger: React.FC<RevenueLedgerProps> = ({
                     value={wyMall}
                     onChange={(e) => setWyMall(Number(e.target.value))}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Brand Card 4: Mudsanghoe */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-sky-500/30 space-y-3 flex flex-col justify-between">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <span className="text-xs font-bold text-sky-400 flex items-center gap-1.5">
-                  <span>🏬</span> 머드상회
-                </span>
-                <span className="text-[10px] font-mono text-slate-400 font-bold">
-                  {mshAmount.toLocaleString()}원
-                </span>
-              </div>
-              <div className="space-y-2.5">
-                <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">머드상회 매출액 (원)</label>
-                  <input
-                    type="number"
-                    value={mshAmount}
-                    onChange={(e) => setMshAmount(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>

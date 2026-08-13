@@ -16,6 +16,12 @@ pids
 *.seed
 *.pid.lock
 
+# Python cache & SQLite
+__pycache__/
+*.pyc
+*.sqlite
+*.db
+
 # Directory for instrumented code leveraged by Istanbul
 lib-cov
 

@@ -57,7 +57,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
       }
     } catch (err) {
       console.error('Failed to fetch product and set catalog:', err);
-    } fontally {
+    } finally {
       if (isInitial) {
         setLoading(false);
       }

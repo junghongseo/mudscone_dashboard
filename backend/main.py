@@ -4,7 +4,8 @@ import re
 import uuid
 import shutil
 import openpyxl
-from typing import Optional
+from typing import Optional, List, Dict, Any
+
 from dotenv import load_dotenv
 
 # Load parent Dashboard/.env and local backend/.env
@@ -30,6 +31,8 @@ from excel_parsers import (
     try_parse_youtube_excel,
 )
 from report_exporter import export_report_excel
+from production_calculator import parse_production_excel
+
 
 app = FastAPI(title="VAT Report Automation API")
 
@@ -89,10 +92,6 @@ def get_gemini_key() -> Optional[str]:
 
 
 def recalculate_bank_transfer(report_id: str, brand: str):
-    """
-    Recalculates the amount for the bank transfer row of a brand.
-    Formula: bank_income - bank_expense - bank_toss_receipt - bank_koces_receipt (if Otter)
-    """
     try:
         res = supabase.table("report_rows").select("*").eq("report_id", report_id).eq("brand", brand).execute()
         rows = res.data or []
@@ -130,9 +129,6 @@ def recalculate_bank_transfer(report_id: str, brand: str):
 
 
 def initialize_report_rows(report_id: str):
-    """
-    Pre-populates rows for a new VAT report using the template Excel file.
-    """
     if not os.path.exists(TEMPLATE_PATH):
         print(f"Template path does not exist: {TEMPLATE_PATH}")
         return
@@ -281,352 +277,434 @@ def update_report_row(row_id: str, payload: RowUpdatePayload):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/rows/{row_id}/upload")
-def upload_and_analyze(
-    row_id: str,
-    file: UploadFile = File(...),
-    file_type: str = Form("standard")
-):
+# ==============================================================================
+# Production Order & Batch Calculator Endpoints
+# ==============================================================================
+
+class ProductCatalogPayload(BaseModel):
+    name: str
+    category: str = "삼각"
+    batch_size: int = 8
+    min_bumper_qty: int = 0
+    is_confirmed: bool = True
+    parent_scone_name: Optional[str] = None
+    oven_number: Optional[str] = "1"
+    heavy_cream_per_panel: Optional[int] = 0
+    sort_order: Optional[int] = 999
+
+
+class ReorderItemPayload(BaseModel):
+    name: str
+    sort_order: int
+    is_separator: Optional[bool] = False
+
+class ReorderCatalogPayload(BaseModel):
+    orders: List[ReorderItemPayload]
+
+
+class SetItemComponentPayload(BaseModel):
+    product_name: str
+    quantity: int = 1
+
+class SetCatalogPayload(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    set_name: Optional[str] = None
+    description: Optional[str] = ""
+    is_confirmed: bool = True
+    items: Optional[List[SetItemComponentPayload]] = None
+    components: Optional[List[SetItemComponentPayload]] = None
+
+class ProductionRecordSavePayload(BaseModel):
+    record_date: Optional[str] = None
+    records: list
+
+
+@app.post("/api/production/parse-excel")
+async def api_parse_production_excel(file: UploadFile = File(...)):
     try:
-        row_res = supabase.table("report_rows").select("*").eq("id", row_id).execute()
-        if not row_res.data:
-            raise HTTPException(status_code=404, detail="Row not found")
-        row = row_res.data[0]
+        contents = await file.read()
+        
+        # 1. Build set_catalog_map from DB
+        set_catalog_map = {}
+        try:
+            sets_res = supabase.table("set_catalog").select("*").execute()
+            if sets_res.data:
+                set_ids = [s["id"] for s in sets_res.data]
+                items_res = supabase.table("set_items").select("*").in_("set_id", set_ids).execute()
+                items_by_set = {}
+                if items_res.data:
+                    for it in items_res.data:
+                        items_by_set.setdefault(it["set_id"], []).append({
+                            "product_name": it["product_name"],
+                            "quantity": it.get("quantity", 1)
+                        })
+                
+                for s in sets_res.data:
+                    set_catalog_map[s["name"]] = {
+                        "id": s["id"],
+                        "name": s["name"],
+                        "items": items_by_set.get(s["id"], [])
+                    }
+        except Exception as e:
+            print("Failed to load set_catalog for excel parsing:", e)
 
-        file_ext = os.path.splitext(file.filename)[1]
-        unique_filename = f"{uuid.uuid4()}{file_ext}"
-        local_filepath = os.path.join(UPLOAD_DIR, unique_filename)
+        # 2. Check single product DB catalog overrides
+        catalog_res = supabase.table("product_catalog").select("*").execute()
+        catalog_map = {}
+        if catalog_res.data:
+            for c in catalog_res.data:
+                catalog_map[c["name"]] = c
 
-        with open(local_filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # 3. Parse excel with set decomposition & catalog map
+        parse_result = parse_production_excel(contents, set_catalog_map=set_catalog_map, catalog_dict=catalog_map)
+        parsed_items = parse_result.get("items", [])
+        set_breakdowns = parse_result.get("set_breakdowns", [])
 
-        with open(local_filepath, "rb") as f:
-            file_bytes = f.read()
-
-        parsed_amount = None
-        custom_reason = None
-        if file_ext.lower() in ['.xlsx', '.xls']:
-            if file_type in ['bank_income', 'bank_expense']:
-                parsed_amount = try_parse_bank_excel(file_bytes, file_type)
-            elif row["pg_store"] == "토스페이먼츠":
-                parsed_amount = try_parse_toss_excel(file_bytes, row["classification"])
-            elif row["pg_store"] and ("네이버" in row["pg_store"] or "스마트스토어" in row["pg_store"]):
-                parsed_amount = try_parse_naver_pay_excel(file_bytes, row["classification"])
-            elif row["pg_store"] and "KOCES" in row["pg_store"]:
-                parsed_amount = try_parse_koces_excel(file_bytes, row["classification"])
-            elif row["pg_store"] and "큐텐" in row["pg_store"]:
-                parsed_amount = try_parse_qoo10_excel(file_bytes)
-            elif row["pg_store"] == "페이팔":
-                res_tuple = try_parse_paypal_excel(file_bytes)
-                if res_tuple:
-                    parsed_amount, custom_reason = res_tuple
-            elif row["brand"] == "유튜브":
-                res_tuple = try_parse_youtube_excel(file_bytes)
-                if res_tuple:
-                    parsed_amount, custom_reason = res_tuple
-
-        if parsed_amount is not None:
-            reason = custom_reason or f"Excel 파일에서 직접 파싱되었습니다. ({row['brand']} - {row['classification']})"
-            analysis_result = {
-                "status": "success",
-                "amount": parsed_amount,
-                "raw_response": reason
-            }
-        else:
-            api_key = get_gemini_key()
-            if not api_key:
-                raise HTTPException(status_code=400, detail="Gemini API Key가 설정되지 않았습니다.")
-
-            brand = row["brand"]
-            pg_store = row["pg_store"]
-            classification = row["classification"]
-            reference = row["reference"]
-
-            if pg_store == "에이블리":
-                if classification == "신용카드 발행":
-                    reference = "에이블리 부가세신고 내역 이미지에서 '신용카드 발행' 열의 '총 합계' 금액을 찾아 반환하십시오."
-                elif classification == "현금영수증 발행":
-                    reference = "에이블리 부가세신고 내역 이미지에서 '현금영수증 발행' 열의 '총 합계' 금액을 찾아 반환하십시오."
-                elif classification == "현금 결제":
-                    reference = "에이블리 부가세신고 내역 이미지에서 '현금 결제' 열의 '총 합계' 금액을 찾아 반환하십시오."
-                elif classification == "휴대폰 결제":
-                    reference = "에이블리 부가세신고 내역 이미지에서 '휴대폰 결제' 열의 '총 합계' 금액을 찾아 반환하십시오."
-                elif classification == "프로모션 지원금":
-                    reference = "에이블리 부가세신고 내역 이미지에서 '프로모션 지원금' 열의 '총 합계' 금액을 찾아 반환하십시오."
-                elif classification == "기타":
-                    reference = "에이블리 부가세신고 내역 이미지에서 '기타' 하위의 가장 오른쪽 '기타' 열의 '총 합계' 금액을 찾아 반환하십시오."
-            elif pg_store and "쿠팡" in pg_store:
-                if classification == "신용/체크카드 발행 매출":
-                    reference = "쿠팡 부가세신고 매출 내역 이미지에서 '신용/체크카드 발행 매출' 열의 '총합계' 금액을 찾아 반환하십시오."
-                elif classification == "현금영수증 발행 매출":
-                    reference = "쿠팡 부가세신고 매출 내역 이미지에서 '현금영수증 발행 매출' 열의 '총합계' 금액을 찾아 반환하십시오."
-                elif classification == "기타":
-                    reference = "쿠팡 부가세신고 매출 내역 이미지에서 '기타' 열의 '총합계' 금액을 찾아 반환하십시오."
-
-            if file_type == 'bank_income':
-                classification = "무통장입금 수입 매출"
-                reference = "수입 거래내역 엑셀/이미지에서 무통장입금 총 매출 합계를 찾아 반환하십시오."
-            elif file_type == 'bank_expense':
-                classification = "무통장입금 지출 취소환불"
-                reference = "지출 거래내역 엑셀/이미지에서 취소환불 금액 합계를 찾아 반환하십시오."
-
-            supabase.table("report_rows").update({"status": "analyzing"}).eq("id", row_id).execute()
-
-            analysis_result = analyze_document_with_gemini(
-                api_key=api_key,
-                file_bytes=file_bytes,
-                file_name=file.filename,
-                mime_type=file.content_type or "",
-                brand=brand,
-                pg_store=pg_store,
-                classification=classification,
-                reference=reference
-            )
-
-        if analysis_result["status"] == "success":
-            amount = analysis_result["amount"]
-
-            update_data = {}
-            if file_type == 'bank_income':
-                update_data["bank_income"] = amount
-                update_data["file_path"] = local_filepath
-            elif file_type == 'bank_expense':
-                update_data["bank_expense"] = amount
-                update_data["file_path_extra"] = local_filepath
+        # Auto-register new unconfirmed products & override settings
+        new_products_to_insert = []
+        for item in parsed_items:
+            name = item["product_name"]
+            if name in catalog_map:
+                item["category"] = catalog_map[name]["category"]
+                item["batch_size"] = catalog_map[name]["batch_size"]
+                item["min_bumper_qty"] = catalog_map[name].get("min_bumper_qty", 0)
+                item["is_confirmed"] = catalog_map[name].get("is_confirmed", True)
+                item["parent_scone_name"] = catalog_map[name].get("parent_scone_name")
+                item["oven_number"] = catalog_map[name].get("oven_number", "1")
+                item["heavy_cream_per_panel"] = catalog_map[name].get("heavy_cream_per_panel", 0)
+                item["sort_order"] = catalog_map[name].get("sort_order", 999)
             else:
-                update_data["amount"] = amount
-                update_data["file_path"] = local_filepath
-                update_data["status"] = "success"
-
-            update_data["raw_response"] = {"text": analysis_result["raw_response"]}
-
-            supabase.table("report_rows").update(update_data).eq("id", row_id).execute()
-
-            if row["classification"] == "무통장입금":
-                recalculate_bank_transfer(row["report_id"], row["brand"])
-            elif row["pg_store"] == "토스페이먼츠" and row["classification"] == "현금영수증 별도발급":
-                recalculate_bank_transfer(row["report_id"], row["brand"])
-
-            updated_row_res = supabase.table("report_rows").select("*").eq("id", row_id).execute()
-            return updated_row_res.data[0]
-        else:
-            supabase.table("report_rows").update({
-                "status": "error",
-                "raw_response": {"error": analysis_result.get("error")}
-            }).eq("id", row_id).execute()
-            raise HTTPException(status_code=500, detail=analysis_result.get("error"))
-
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-def load_historical_sales():
-    historical_path = r"c:\Users\damon\Desktop\ANTIGRAVITY\부가세신고\sample\부가세신고 매출자료 정리.xlsx"
-    if not os.path.exists(historical_path):
-        return []
-    try:
-        wb = openpyxl.load_workbook(historical_path, data_only=True)
-        if '성장그래프' not in wb.sheetnames:
-            return []
-        sheet = wb['성장그래프']
-        data = []
-        for r in range(2, sheet.max_row + 1):
-            label = sheet.cell(row=r, column=1).value
-            sales = sheet.cell(row=r, column=2).value
-            if not label or sales is None:
-                continue
-            label_str = str(label).strip()
-            if label_str in ["합계", "계", "이전"]:
-                continue
-            match = re.match(r"(\d{4})년\s*(\d)분기", label_str)
-            if match:
-                year = int(match.group(1))
-                quarter = int(match.group(2))
-                if year < 2026 or (year == 2026 and quarter < 2):
-                    data.append({
-                        "year": year,
-                        "quarter": quarter,
-                        "quarter_label": f"{year}년 {quarter}분기",
-                        "sales": int(sales)
+                item["min_bumper_qty"] = item.get("min_bumper_qty", 0)
+                item["is_confirmed"] = False
+                item["parent_scone_name"] = None
+                item["oven_number"] = "1"
+                item["heavy_cream_per_panel"] = 0
+                item["sort_order"] = 999
+                
+                # Do not insert into product_catalog if it is already a registered Set Product!
+                if name not in set_catalog_map:
+                    new_products_to_insert.append({
+                        "name": name,
+                        "category": item["category"],
+                        "batch_size": item["batch_size"],
+                        "min_bumper_qty": 0,
+                        "is_confirmed": False,
+                        "parent_scone_name": None,
+                        "oven_number": "1",
+                        "heavy_cream_per_panel": 0,
+                        "sort_order": 999,
                     })
-        return sorted(data, key=lambda x: (x["year"], x["quarter"]))
-    except Exception as e:
-        print(f"Error loading historical sales from excel: {e}")
-        return []
 
+        # Insert newly detected products as unconfirmed into DB
+        if new_products_to_insert:
+            try:
+                supabase.table("product_catalog").upsert(new_products_to_insert, on_conflict="name").execute()
+            except Exception as e:
+                print("Failed to auto-insert new catalog items:", e)
 
-@app.get("/api/analytics")
-def get_sales_analytics():
-    try:
-        reports_res = supabase.table("reports").select("*").execute()
-        reports = reports_res.data or []
+        # Recalculate required_qty & production_qty & bumper logic cleanly for each category
+        for item in parsed_items:
+            import math
+            order_qty = item.get("order_qty", 0)
+            extra_qty = item.get("extra_qty", 0)
+            carryover_qty = item.get("carryover_qty", 0)
+            
+            required_qty = order_qty + extra_qty
+            prod_qty = max(0, required_qty - carryover_qty)
+            bs = item.get("batch_size", 8)
+            extra_panels = item.get("min_bumper_qty", 0) or 0
+            cat = item.get("category")
 
-        rows_res = supabase.table("report_rows").select("*").execute()
-        all_rows = rows_res.data or []
+            item["required_qty"] = required_qty
+            item["production_qty"] = prod_qty
 
-        report_rows_map = {}
-        for row in all_rows:
-            rid = row["report_id"]
-            if rid not in report_rows_map:
-                report_rows_map[rid] = []
-            report_rows_map[rid].append(row)
+            if cat == '스틱':
+                base_panels = math.ceil(prod_qty / 9.0) if prod_qty > 0 else 0
+                item["panels"] = base_panels
+                item["is_bumper_applied"] = False
+                item["base_panels"] = base_panels
+                item["excess_qty"] = (base_panels * 9) - prod_qty
+            elif cat == '미니쉐이크':
+                base_panels = math.ceil(prod_qty / 4.0) if prod_qty > 0 else 0
+                item["panels"] = base_panels
+                item["is_bumper_applied"] = False
+                item["base_panels"] = base_panels
+                item["excess_qty"] = (base_panels * 4) - prod_qty
+            elif cat == '미니큐브':
+                base_panels = math.ceil(prod_qty / 2.0) if prod_qty > 0 else 0
+                item["panels"] = base_panels
+                item["is_bumper_applied"] = False
+                item["base_panels"] = base_panels
+                item["excess_qty"] = (base_panels * 2) - prod_qty
+            elif cat in ['서비스', '기타']:
+                item["panels"] = 0
+                item["is_bumper_applied"] = False
+                item["base_panels"] = 0
+                item["excess_qty"] = 0
+            else:
+                base_panels = math.ceil(prod_qty / bs) if bs > 0 and prod_qty > 0 else 0
+                item["panels"] = base_panels + extra_panels
+                item["is_bumper_applied"] = extra_panels > 0
+                item["base_panels"] = base_panels
+                item["excess_qty"] = (item["panels"] * bs) - prod_qty
 
-        sales_brands = ['머드스콘', '오터', '위시', '유튜브', '페이팔', '인스타그램']
+        # Fetch custom layout from settings table (guaranteed persistence & handles separators)
+        custom_layout = []
+        try:
+            settings_res = supabase.table("settings").select("value").eq("key", "product_sort_orders").execute()
+            if settings_res.data:
+                import json
+                custom_layout = json.loads(settings_res.data[0]["value"])
+        except Exception as e:
+            print("Failed to load product_sort_orders from settings:", e)
 
-        all_quarters = []
-        breakdowns = {}
+        order_map = {}
+        separators_to_add = []
+        if custom_layout:
+            for item in custom_layout:
+                if isinstance(item, dict):
+                    name = item.get("name")
+                    s_order = item.get("sort_order", 999)
+                    if name:
+                        order_map[name] = s_order
+                    if item.get("is_separator"):
+                        separators_to_add.append({
+                            "product_name": name or "--- 팀 구분선 ---",
+                            "category": "기타",
+                            "batch_size": 1,
+                            "order_qty": 0,
+                            "extra_qty": 0,
+                            "required_qty": 0,
+                            "carryover_qty": 0,
+                            "production_qty": 0,
+                            "panels": 0,
+                            "base_panels": 0,
+                            "excess_qty": 0,
+                            "is_separator": True,
+                            "sort_order": s_order,
+                        })
 
-        historical_data = load_historical_sales()
-        for hist in historical_data:
-            rep_id = f"historical_{hist['year']}_{hist['quarter']}"
-            all_quarters.append({
-                "report_id": rep_id,
-                "year": hist["year"],
-                "quarter": hist["quarter"],
-                "quarter_label": hist["quarter_label"],
-                "sales": hist["sales"]
-            })
-            breakdowns[rep_id] = {
-                "totalSales": hist["sales"],
-                "growthRate": 0.0,
-                "brandBreakdown": [],
-                "pgBreakdown": [],
-                "topBrand": {"name": "-", "value": 0, "percentage": 0},
-                "topPg": {"name": "-", "value": 0, "percentage": 0}
-            }
+        for item in parsed_items:
+            name = item["product_name"]
+            if name in order_map:
+                item["sort_order"] = order_map[name]
+            elif name in catalog_map:
+                item["sort_order"] = catalog_map[name].get("sort_order", 999)
+            else:
+                item["sort_order"] = 999
 
-        for rep in reports:
-            if rep["year"] < 2026 or (rep["year"] == 2026 and rep["quarter"] < 2):
-                continue
+        if separators_to_add:
+            parsed_items.extend(separators_to_add)
 
-            rep_id = rep["id"]
-            rep_rows = report_rows_map.get(rep_id, [])
-
-            filtered_rows = [
-                r for r in rep_rows
-                if r["brand"] in sales_brands
-                and r["classification"] != "합계"
-                and r["brand"] != "판매금액 총합"
-                and r["amount"] is not None
-            ]
-
-            total_sales = sum(r["amount"] for r in filtered_rows)
-
-            brand_map = {}
-            pg_map = {}
-
-            for r in filtered_rows:
-                b = r["brand"]
-                p = r["pg_store"]
-                amt = r["amount"]
-
-                brand_map[b] = brand_map.get(b, 0) + amt
-                pg_map[p] = pg_map.get(p, 0) + amt
-
-            brand_breakdown = [
-                {
-                    "name": b,
-                    "value": val,
-                    "percentage": round((val / total_sales * 100), 1) if total_sales > 0 else 0
-                }
-                for b, val in brand_map.items()
-            ]
-            brand_breakdown.sort(key=lambda x: x["value"], reverse=True)
-
-            pg_breakdown = [
-                {
-                    "name": p,
-                    "value": val,
-                    "percentage": round((val / total_sales * 100), 1) if total_sales > 0 else 0
-                }
-                for p, val in pg_map.items()
-            ]
-            pg_breakdown.sort(key=lambda x: x["value"], reverse=True)
-
-            top_brand = brand_breakdown[0] if brand_breakdown else {"name": "-", "value": 0, "percentage": 0}
-            top_pg = pg_breakdown[0] if pg_breakdown else {"name": "-", "value": 0, "percentage": 0}
-
-            all_quarters.append({
-                "report_id": rep_id,
-                "year": rep["year"],
-                "quarter": rep["quarter"],
-                "quarter_label": f"{rep['year']}년 {rep['quarter']}분기",
-                "sales": total_sales
-            })
-
-            breakdowns[rep_id] = {
-                "totalSales": total_sales,
-                "growthRate": 0.0,
-                "brandBreakdown": brand_breakdown,
-                "pgBreakdown": pg_breakdown,
-                "topBrand": top_brand,
-                "topPg": top_pg
-            }
-
-        sorted_quarters = sorted(all_quarters, key=lambda x: (x["year"], x["quarter"]))
-
-        previous_sales = None
-        for item in sorted_quarters:
-            sales = item["sales"]
-            growth_rate = 0.0
-            if previous_sales is not None and previous_sales > 0:
-                growth_rate = round(((sales - previous_sales) / previous_sales) * 100, 1)
-            previous_sales = sales
-
-            rep_id = item["report_id"]
-            if rep_id in breakdowns:
-                breakdowns[rep_id]["growthRate"] = growth_rate
+        # Sort items strictly by sort_order ASC, then product_name ASC
+        parsed_items.sort(key=lambda i: (i.get("sort_order", 999), i.get("product_name", "")))
 
         return {
-            "trends": sorted_quarters,
-            "breakdowns": breakdowns
+            "status": "success",
+            "items": parsed_items,
+            "set_breakdowns": set_breakdowns
         }
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse production excel: {str(e)}")
+
+
+@app.get("/api/production/catalog")
+def api_get_product_catalog():
+    try:
+        res = supabase.table("product_catalog").select("*").order("sort_order").order("name").execute()
+        return {"status": "success", "data": res.data or []}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/reports/{report_id}/export")
-def export_report(report_id: str):
+@app.post("/api/production/catalog")
+def api_save_product_catalog(payload: ProductCatalogPayload):
     try:
-        report_res = supabase.table("reports").select("*").eq("id", report_id).execute()
-        if not report_res.data:
-            raise HTTPException(status_code=404, detail="Report not found")
-        report = report_res.data[0]
+        data_to_save = {
+            "name": payload.name,
+            "category": payload.category,
+            "batch_size": payload.batch_size,
+            "min_bumper_qty": payload.min_bumper_qty,
+            "is_confirmed": payload.is_confirmed,
+            "parent_scone_name": payload.parent_scone_name,
+            "oven_number": payload.oven_number if (payload.oven_number is not None and str(payload.oven_number).strip() != "") else "1",
+            "heavy_cream_per_panel": payload.heavy_cream_per_panel if payload.heavy_cream_per_panel is not None else 0,
+            "sort_order": payload.sort_order if payload.sort_order is not None else 999,
+        }
+        res = supabase.table("product_catalog").upsert(data_to_save, on_conflict="name").execute()
+        return {"status": "success", "data": res.data}
+    except Exception as e:
+        print("Error saving product catalog item:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
-        rows_res = supabase.table("report_rows").select("*").eq("report_id", report_id).order("excel_row", desc=False).execute()
-        rows = rows_res.data
 
-        return export_report_excel(report, rows, TEMPLATE_PATH, UPLOAD_DIR)
+@app.post("/api/production/catalog/reorder")
+def api_reorder_product_catalog(payload: ReorderCatalogPayload):
+    try:
+        import json
+        orders_data = [item.dict() for item in payload.orders]
+        # 1. Store in settings table for guaranteed persistence
+        supabase.table("settings").upsert({"key": "product_sort_orders", "value": json.dumps(orders_data)}, on_conflict="key").execute()
+
+        # 2. Also try updating product_catalog table column for product items
+        for item in payload.orders:
+            if not getattr(item, 'is_separator', False):
+                try:
+                    supabase.table("product_catalog").update({"sort_order": item.sort_order}).eq("name", item.name).execute()
+                except Exception as ex:
+                    print(f"Ignored catalog column update for {item.name}:", ex)
+
+        return {"status": "success", "updated_count": len(payload.orders)}
+    except Exception as e:
+        print("Error reordering product catalog:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/production/catalog/{name}")
+def api_delete_product_catalog(name: str):
+    try:
+        res = supabase.table("product_catalog").delete().eq("name", name).execute()
+        return {"status": "success", "data": res.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/production/sets")
+def api_get_set_catalog():
+    try:
+        sets_res = supabase.table("set_catalog").select("*").order("name").execute()
+        
+        if not sets_res.data:
+            return {"status": "success", "data": []}
+
+        set_ids = [s["id"] for s in sets_res.data]
+        items_res = supabase.table("set_items").select("*").in_("set_id", set_ids).execute()
+        items_by_set = {}
+        if items_res.data:
+            for it in items_res.data:
+                items_by_set.setdefault(it["set_id"], []).append({
+                    "id": it.get("id"),
+                    "set_id": it.get("set_id"),
+                    "product_name": it.get("product_name"),
+                    "quantity": it.get("quantity", 1)
+                })
+
+        result = []
+        for s in sets_res.data:
+            result.append({
+                "id": s.get("id"),
+                "set_name": s["name"],
+                "description": s.get("description", ""),
+                "is_confirmed": s.get("is_confirmed", True),
+                "components": items_by_set.get(s["id"], [])
+            })
+
+        return {"status": "success", "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/production/sets")
+def api_save_set_catalog(payload: SetCatalogPayload):
+    try:
+        target_name = payload.name or payload.set_name
+        if not target_name:
+            raise HTTPException(status_code=400, detail="Set name is required")
+
+        set_res = supabase.table("set_catalog").upsert({
+            "name": target_name,
+            "description": payload.description or "",
+            "is_confirmed": payload.is_confirmed,
+        }, on_conflict="name").execute()
+
+        if not set_res.data:
+            raise Exception("Failed to upsert set_catalog")
+
+        set_id = set_res.data[0]["id"]
+
+        supabase.table("set_items").delete().eq("set_id", set_id).execute()
+
+        comp_list = payload.items if payload.items is not None else (payload.components or [])
+        if comp_list:
+            items_to_insert = [
+                {
+                    "set_id": set_id,
+                    "product_name": comp.product_name,
+                    "quantity": comp.quantity
+                }
+                for comp in comp_list
+            ]
+            supabase.table("set_items").insert(items_to_insert).execute()
+
+        return {"status": "success", "data": set_res.data[0]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/production/sets/{name}")
+def api_delete_set_catalog(name: str):
+    try:
+        from urllib.parse import unquote
+        clean_name = unquote(name).strip()
+        
+        # Search by decoded name, original name, or id
+        set_res = supabase.table("set_catalog").select("id").eq("name", clean_name).execute()
+        if not set_res.data:
+            set_res = supabase.table("set_catalog").select("id").eq("name", name).execute()
+        if not set_res.data:
+            try:
+                set_res = supabase.table("set_catalog").select("id").eq("id", clean_name).execute()
+            except Exception:
+                pass
+
+        if set_res.data:
+            for s in set_res.data:
+                s_id = s["id"]
+                supabase.table("set_items").delete().eq("set_id", s_id).execute()
+                supabase.table("set_catalog").delete().eq("id", s_id).execute()
+        return {"status": "success"}
+    except Exception as e:
+        print("Set delete error:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/production/save-summary")
+def api_save_production_summary(payload: Dict[str, Any]):
+    try:
+        record_date = payload.get("record_date")
+        items = payload.get("items", [])
+
+        if not record_date:
+            raise HTTPException(status_code=400, detail="record_date is required")
+
+        supabase.table("production_records").delete().eq("record_date", record_date).execute()
+
+        rows_to_insert = []
+        for item in items:
+            rows_to_insert.append({
+                "record_date": record_date,
+                "product_name": item["product_name"],
+                "category": item["category"],
+                "batch_size": item.get("batch_size", 8),
+                "order_qty": item.get("order_qty", 0),
+                "extra_qty": item.get("extra_qty", 0),
+                "required_qty": item.get("required_qty", 0),
+                "carryover_qty": item.get("carryover_qty", 0),
+                "production_qty": item.get("production_qty", 0),
+                "panels": item.get("panels", 0),
+                "is_bumper_applied": item.get("is_bumper_applied", False),
+                "excess_qty": item.get("excess_qty", 0),
+                "min_bumper_qty": item.get("min_bumper_qty", 2),
+                "is_confirmed": item.get("is_confirmed", True),
+                "parent_scone_name": item.get("parent_scone_name"),
+            })
+
+        if rows_to_insert:
+            supabase.table("production_records").insert(rows_to_insert).execute()
+
+        return {"status": "success", "inserted_count": len(rows_to_insert)}
     except HTTPException as he:
         raise he
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/settings")
-def get_settings():
-    try:
-        res = supabase.table("settings").select("*").execute()
-        settings_dict = {}
-        if res.data:
-            for item in res.data:
-                settings_dict[item["key"]] = item["value"]
-        if "gemini_api_key" not in settings_dict and os.getenv("GEMINI_API_KEY"):
-            settings_dict["gemini_api_key"] = os.getenv("GEMINI_API_KEY")
-        return settings_dict
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/settings")
-def save_setting(payload: SettingPayload):
-    try:
-        res = supabase.table("settings").upsert({
-            "key": "gemini_api_key",
-            "value": payload.value
-        }).execute()
-        return {"status": "success", "data": res.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

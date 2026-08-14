@@ -9,13 +9,39 @@ import { YoYRevenueChart } from './components/revenue/YoYRevenueChart';
 import { RevenueLedger } from './components/revenue/RevenueLedger';
 import { OverviewDashboard } from './components/overview/OverviewDashboard';
 import { VatReportApp } from './components/vat/VatReportApp';
+import { ProductionCalculator } from './components/production/ProductionCalculator';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
+
 
 const STRATEGY_STORAGE_KEY = 'mudscone_dashboard_strategy_v5';
 const REVENUE_RECORDS_KEY = 'mudscone_revenue_records_v1';
+const THEME_STORAGE_KEY = 'mudscone_theme_preference_v1';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<BrandId>('overview');
+
+  // Theme State (Dark vs Light)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    return (saved as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    const root = document.documentElement;
+    if (theme === 'light') {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    } else {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    }
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
 
   // Initialize Brand Data State
   const [brandDataMap, setBrandDataMap] = useState<Record<'mudscone' | 'oatter' | 'wysh', BrandStrategyData>>(() => {
@@ -348,7 +374,10 @@ export const App: React.FC = () => {
         onTabChange={setActiveTab}
         onReset={handleReset}
         isCloudSynced={isSupabaseConfigured}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
+
 
       {/* Main Workspace Content */}
       <main className="max-w-7xl w-full mx-auto px-4 lg:px-8 pt-6 flex-1 space-y-6">
@@ -364,9 +393,12 @@ export const App: React.FC = () => {
             onSaveRecord={handleSaveRevenueRecord}
             onDeleteRecord={handleDeleteRevenueRecord}
           />
+        ) : activeTab === 'production' ? (
+          <ProductionCalculator />
         ) : activeTab === 'vat' ? (
           <VatReportApp />
         ) : (
+
           <div className="space-y-6">
             {/* Brand Header Banner */}
             <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -421,7 +453,7 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="mt-12 text-center text-xs text-slate-500 py-6 border-t border-slate-900">
+      <footer className="mt-12 text-center text-xs text-slate-500 py-6 border-t border-slate-900 print:hidden">
         <p>© 2026 Mud Scone, Inc. All rights reserved. Strategic Business Unit Dashboard.</p>
       </footer>
     </div>

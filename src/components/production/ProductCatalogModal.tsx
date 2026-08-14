@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ProductCatalogItem, SetProductCatalogItem, SetItemComponent } from '../../types/production';
+import { ProductCatalogItem, SetCatalogItem, SetItemComponent } from '../../types/production';
 import { Tag, Layers, Package, X, Plus, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { SingleCatalogTab } from './SingleCatalogTab';
@@ -19,12 +19,12 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'single' | 'set'>('single');
   const [catalog, setCatalog] = useState<ProductCatalogItem[]>([]);
-  const [setList, setSetList] = useState<SetProductCatalogItem[]>([]);
+  const [setList, setSetList] = useState<SetCatalogItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
   // New Single Form State
   const [newName, setNewName] = useState<string>('');
-  const [newCategory, setNewCategory] = useState<'삼각' | '바' | '미니큐브'>('삼각');
+  const [newCategory, setNewCategory] = useState<'삼각' | '바' | '미니큐브' | '미니쉐이크' | '스틱' | '서비스' | '기타'>('삼각');
   const [newParentSconeName, setNewParentSconeName] = useState<string>('');
   const [newBatchSize, setNewBatchSize] = useState<number>(8);
   const [newMinBumperQty, setNewMinBumperQty] = useState<number>(2);
@@ -57,7 +57,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
       }
     } catch (err) {
       console.error('Failed to fetch product and set catalog:', err);
-    } finally {
+    } font-medium {
       if (isInitial) {
         setLoading(false);
       }
@@ -120,7 +120,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
     setIsSetEditOpen(true);
   };
 
-  const handleOpenEditSetModal = (setItem: SetProductCatalogItem) => {
+  const handleOpenEditSetModal = (setItem: SetCatalogItem) => {
     setEditingSetName(setItem.set_name);
     setSetComponents([...setItem.components]);
     setIsSetEditOpen(true);
@@ -144,7 +144,9 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
 
     try {
       await axios.post(`${API_BASE}/api/production/sets`, {
+        name: editingSetName.trim(),
         set_name: editingSetName.trim(),
+        items: validComponents,
         components: validComponents,
       });
 
@@ -245,21 +247,10 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
           ) : activeTab === 'single' ? (
             <SingleCatalogTab
               catalog={catalog}
-              unconfirmedSingle={unconfirmedSingle}
-              confirmedScones={confirmedScones}
-              newName={newName}
-              setNewName={setNewName}
-              newCategory={newCategory}
-              setNewCategory={setNewCategory}
-              newParentSconeName={newParentSconeName}
-              setNewParentSconeName={setNewParentSconeName}
-              newMinBumperQty={newMinBumperQty}
-              setNewMinBumperQty={setNewMinBumperQty}
-              setNewBatchSize={setNewBatchSize}
-              handleAddOrUpdateSingle={handleAddOrUpdateSingle}
-              handleCreateSingle={handleCreateSingle}
-              handleDeleteSingle={handleDeleteSingle}
-              handleConvertToSet={handleConvertToSet}
+              setList={setList}
+              fetchData={fetchData}
+              onRefreshCatalog={onRefreshCatalog}
+              onConvertToSet={handleConvertToSet}
             />
           ) : (
             /* Set Products Tab */
@@ -347,16 +338,43 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
 
             <form onSubmit={handleSaveSet} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  세트 상품명 (EasyAdmin 엑셀에 나오는 품목명)
-                </label>
-                <input
-                  type="text"
-                  placeholder="예: [세트] 머드스콘 인기 4종 모음전"
-                  value={editingSetName}
-                  onChange={(e) => setEditingSetName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-amber-500"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-300">
+                    세트 상품명 (EasyAdmin 엑셀에 나오는 품목명)
+                  </label>
+                  {unconfirmedSingle.length > 0 && (
+                    <span className="text-[11px] text-amber-400 font-medium">
+                      💡 엑셀 감지 품목 목록에서 바로 선택
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="예: [스틱]더티너티밤스틱 3팩"
+                    value={editingSetName}
+                    onChange={(e) => setEditingSetName(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-amber-500"
+                  />
+                  {unconfirmedSingle.length > 0 && (
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setEditingSetName(e.target.value);
+                        }
+                      }}
+                      className="w-56 px-2 py-2 bg-slate-900 border border-amber-500/50 rounded-lg text-xs text-amber-300 font-bold focus:outline-none"
+                    >
+                      <option value="">(엑셀 감지 품목 선택)</option>
+                      {unconfirmedSingle.map((u) => (
+                        <option key={u.name} value={u.name}>
+                          {u.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -374,18 +392,31 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {setComponents.map((comp, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <select
-                        value={comp.product_name}
-                        onChange={(e) => updateComponentRow(idx, 'product_name', e.target.value)}
-                        className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 focus:outline-none"
-                      >
-                        <option value="">(구성 단품 스콘 선택)</option>
-                        {confirmedSingle.map((p) => (
-                          <option key={p.name} value={p.name}>
-                            {p.name} ({p.category}스콘)
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex-1 flex gap-1">
+                        <input
+                          type="text"
+                          placeholder="구성 품목명 직접 입력 또는 선택"
+                          value={comp.product_name}
+                          onChange={(e) => updateComponentRow(idx, 'product_name', e.target.value)}
+                          className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-amber-500"
+                        />
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              updateComponentRow(idx, 'product_name', e.target.value);
+                            }
+                          }}
+                          className="w-36 px-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-amber-400 focus:outline-none font-bold"
+                        >
+                          <option value="">(단품 마스터에서 선택)</option>
+                          {confirmedSingle.map((p) => (
+                            <option key={p.name} value={p.name}>
+                              {p.name} ({p.category})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
                       <input
                         type="number"

@@ -16,12 +16,6 @@ pids
 *.seed
 *.pid.lock
 
-# Python cache & SQLite
-__pycache__/
-*.pyc
-*.sqlite
-*.db
-
 # Directory for instrumented code leveraged by Istanbul
 lib-cov
 
@@ -56,6 +50,11 @@ dist-ssr/
 *.njsproj
 *.sln
 *.sw?
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
 
 # Environment variables
 .env

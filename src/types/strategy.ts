@@ -1,4 +1,4 @@
-export type BrandId = 'overview' | 'mudscone' | 'oatter' | 'wysh' | 'ledger' | 'vat';
+export type BrandId = 'overview' | 'mudscone' | 'oatter' | 'wysh' | 'ledger' | 'production' | 'vat';
 
 export type ERRCQuadrant = 'E' | 'R_reduce' | 'R_raise' | 'C';
 
@@ -13,35 +13,31 @@ export interface StrategyFactor {
   id: string;
   name: string;
   errcQuadrant?: ERRCQuadrant;
-  description?: string;
 }
 
 export interface BusinessItem {
   id: string;
   name: string;
-  color: string;
   isSelf: boolean;
-  lineStyle?: 'solid' | 'dashed' | 'dotted';
-  markerSymbol?: 'square' | 'triangle' | 'diamond' | 'circle';
+  color?: string;
+  tagline?: string;
 }
 
 export interface RevenueGoal {
-  year: number;
   targetAmount: number;
   currentAmount: number;
-  unit: string;
+  year: number;
 }
 
 export interface BrandStrategyData {
-  id: BrandId;
+  id: string;
   name: string;
   englishName: string;
   tagline: string;
   themeColor: string;
-  accentColor: string;
-  errcItems: ERRCItem[];
-  factors: StrategyFactor[];
-  businesses: BusinessItem[];
-  scores: Record<string, number>;
   revenue: RevenueGoal;
+  businesses: BusinessItem[];
+  factors: StrategyFactor[];
+  errcItems: ERRCItem[];
+  scores: Record<string, number>;
 }

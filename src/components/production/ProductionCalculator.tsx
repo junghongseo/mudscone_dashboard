@@ -642,59 +642,59 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left border-collapse">
+              <table className="w-full text-sm text-left border-collapse min-w-[1200px]">
                 <thead>
                   <tr className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-200 text-xs font-bold border-b border-slate-300 dark:border-slate-800 text-center">
-                    <th rowSpan={2} className="py-3 px-2 w-8 text-center text-slate-400 font-normal print:hidden"></th>
-                    <th colSpan={2} className="py-2 px-3 border-r border-slate-300 dark:border-slate-800 bg-slate-200/50 dark:bg-slate-900 text-amber-400 font-extrabold">
-                      오븐
+                    <th rowSpan={2} className="py-3 px-2 w-8 min-w-[32px] text-center text-slate-400 font-normal whitespace-nowrap print:hidden"></th>
+                    <th colSpan={2} className="py-2 px-3 border-r border-slate-300 dark:border-slate-800 bg-slate-200/50 dark:bg-slate-900 text-amber-500 dark:text-amber-400 font-black whitespace-nowrap text-center">
+                      오븐 번호
                     </th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-left whitespace-nowrap">제품명</th>
+                    <th rowSpan={2} className="py-3.5 px-3.5 text-left whitespace-nowrap min-w-[160px]">제품명</th>
 
                     {/* Integrated Total Required Panels (Moved right next to Product Name) */}
-                    <th rowSpan={2} className="py-3.5 px-3 text-right bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black text-sm">
+                    <th rowSpan={2} className="py-3.5 px-3 text-right bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black text-sm whitespace-nowrap min-w-[100px]">
                       통합 최종 필요 판수
                     </th>
 
-                    <th rowSpan={2} className="py-3.5 px-3 text-right">주문량</th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-right">추가량</th>
+                    <th rowSpan={2} className="py-3.5 px-3 text-right whitespace-nowrap min-w-[70px]">주문량</th>
+                    <th rowSpan={2} className="py-3.5 px-3 text-right whitespace-nowrap min-w-[75px]">추가량</th>
                     {showRequiredQty && (
-                      <th rowSpan={2} className="py-3.5 px-3 text-right text-amber-600 dark:text-amber-300">
+                      <th rowSpan={2} className="py-3.5 px-3 text-right text-amber-600 dark:text-amber-300 whitespace-nowrap min-w-[75px]">
                         필요량
                       </th>
                     )}
-                    <th rowSpan={2} className="py-3.5 px-3 text-right">이월재고</th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-right text-amber-600 dark:text-amber-400">필요생산량</th>
+                    <th rowSpan={2} className="py-3.5 px-3 text-right whitespace-nowrap min-w-[75px]">이월재고</th>
+                    <th rowSpan={2} className="py-3.5 px-3 text-right text-amber-600 dark:text-amber-400 whitespace-nowrap min-w-[85px]">필요생산량</th>
                     
-                    <th rowSpan={2} className="py-3.5 px-3 text-right bg-amber-500/10 text-amber-600 dark:text-amber-400 font-black">
+                    <th rowSpan={2} className="py-3.5 px-3 text-right bg-amber-500/10 text-amber-600 dark:text-amber-400 font-black whitespace-nowrap min-w-[95px]">
                       삼각&바 필요 판수
                     </th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-right text-slate-700 dark:text-slate-300 font-bold">
+                    <th rowSpan={2} className="py-3.5 px-3 text-right text-slate-700 dark:text-slate-300 font-bold whitespace-nowrap min-w-[90px]">
                       삼각&바 판수 추가
                     </th>
                     
-                    <th rowSpan={2} className="py-3.5 px-3 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-right border-l border-purple-500/20">
-                      하프팩 & 미니쉐이크 주문량 (봉)
+                    <th rowSpan={2} className="py-3.5 px-3 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-right border-l border-purple-500/20 whitespace-nowrap min-w-[130px]">
+                      하프팩&쉐이크 주문량(봉)
                     </th>
                     
-                    <th rowSpan={2} className="py-3.5 px-3 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-right font-black border-r border-purple-500/20">
-                      하프팩 & 미니쉐이크 판수
+                    <th rowSpan={2} className="py-3.5 px-3 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-right font-black border-r border-purple-500/20 whitespace-nowrap min-w-[110px]">
+                      하프팩&쉐이크 판수
                     </th>
 
-                    <th rowSpan={2} className="py-3.5 px-3 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-right font-black border-l border-r border-indigo-500/20">
+                    <th rowSpan={2} className="py-3.5 px-3 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-right font-black border-l border-r border-indigo-500/20 whitespace-nowrap min-w-[85px]">
                       스틱 판수
                     </th>
 
-                    <th rowSpan={2} className="py-3.5 px-3 bg-sky-500/10 text-sky-700 dark:text-sky-300 text-right border-r border-sky-500/20 font-bold">
-                      미니쉐이크 남는 수량 (봉)
+                    <th rowSpan={2} className="py-3.5 px-3 bg-sky-500/10 text-sky-700 dark:text-sky-300 text-right border-r border-sky-500/20 font-bold whitespace-nowrap min-w-[110px]">
+                      미니쉐이크 남음(봉)
                     </th>
 
-                    <th rowSpan={2} className="py-3.5 px-3 text-right text-slate-700 dark:text-slate-300 font-bold">삼각/바 남음</th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-right text-indigo-400 font-bold">스틱 남음</th>
+                    <th rowSpan={2} className="py-3.5 px-3 text-right text-slate-700 dark:text-slate-300 font-bold whitespace-nowrap min-w-[90px]">삼각/바 남음</th>
+                    <th rowSpan={2} className="py-3.5 px-3 text-right text-indigo-500 dark:text-indigo-400 font-bold whitespace-nowrap min-w-[80px]">스틱 남음</th>
                   </tr>
                   <tr className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-200 text-[11px] font-extrabold border-b border-slate-300 dark:border-slate-800 text-center">
-                    <th className="py-1.5 px-2 text-amber-400 border-r border-slate-300 dark:border-slate-800">삼각 / 바</th>
-                    <th className="py-1.5 px-2 text-purple-300 border-r border-slate-300 dark:border-slate-800">스틱 / 큐브</th>
+                    <th className="py-1.5 px-2 text-amber-500 dark:text-amber-400 border-r border-slate-300 dark:border-slate-800 whitespace-nowrap min-w-[55px]">삼각 / 바</th>
+                    <th className="py-1.5 px-2 text-purple-400 dark:text-purple-300 border-r border-slate-300 dark:border-slate-800 whitespace-nowrap min-w-[55px]">스틱 / 큐브</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -789,43 +789,43 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                 {/* Grand Summary Footer */}
                 <tfoot className="bg-slate-100 dark:bg-slate-950 border-t-2 border-slate-300 dark:border-slate-800 font-bold text-slate-900 dark:text-slate-100">
                   <tr>
-                    <td colSpan={4} className="py-4 px-3 text-center font-extrabold">
+                    <td colSpan={4} className="py-4 px-3 text-center font-extrabold whitespace-nowrap">
                       전체 총 합계 ({items.length}개 제품)
                     </td>
-                    <td className="py-4 px-3 text-right text-emerald-400 text-xl font-black bg-emerald-500/10">
+                    <td className="py-4 px-3 text-right text-emerald-400 text-xl font-black bg-emerald-500/10 whitespace-nowrap">
                       {grandTotalAllPanels} 판
                     </td>
-                    <td className="py-4 px-3 text-right">{items.reduce((a, i) => a + i.order_qty, 0)}개/봉/팩</td>
-                    <td className="py-4 px-3 text-right">{items.reduce((a, i) => a + i.extra_qty, 0)}개/봉/팩</td>
+                    <td className="py-4 px-3 text-right whitespace-nowrap">{items.reduce((a, i) => a + i.order_qty, 0)}개/봉/팩</td>
+                    <td className="py-4 px-3 text-right whitespace-nowrap">{items.reduce((a, i) => a + i.extra_qty, 0)}개/봉/팩</td>
                     {showRequiredQty && (
-                      <td className="py-4 px-3 text-right text-amber-600 dark:text-amber-300">
+                      <td className="py-4 px-3 text-right text-amber-600 dark:text-amber-300 whitespace-nowrap">
                         {items.reduce((a, i) => a + i.required_qty, 0)}개/봉/팩
                       </td>
                     )}
-                    <td className="py-4 px-3 text-right">{items.reduce((a, i) => a + i.carryover_qty, 0)}개/봉/팩</td>
-                    <td className="py-4 px-3 text-right text-amber-600 dark:text-amber-400 text-base">
+                    <td className="py-4 px-3 text-right whitespace-nowrap">{items.reduce((a, i) => a + i.carryover_qty, 0)}개/봉/팩</td>
+                    <td className="py-4 px-3 text-right text-amber-600 dark:text-amber-400 text-base whitespace-nowrap">
                       {sconeItemsOnly.reduce((a, i) => a + i.production_qty, 0)}개
                     </td>
-                    <td className="py-4 px-3 text-right text-amber-700 dark:text-amber-400 font-mono font-bold">
+                    <td className="py-4 px-3 text-right text-amber-700 dark:text-amber-400 font-mono font-bold whitespace-nowrap">
                       {roundHalf(combinedTriangleRows.reduce((a, r) => a + r.sconeDoughPanels, 0) + combinedBarRows.reduce((a, r) => a + r.sconeDoughPanels, 0))}판
                     </td>
-                    <td className="py-4 px-3 text-center text-slate-400">-</td>
-                    <td className="py-4 px-3 text-right text-purple-700 dark:text-purple-300 font-mono font-bold">
+                    <td className="py-4 px-3 text-center text-slate-400 whitespace-nowrap">-</td>
+                    <td className="py-4 px-3 text-right text-purple-700 dark:text-purple-300 font-mono font-bold whitespace-nowrap">
                       {halfpackItems.reduce((a, i) => a + i.order_qty, 0) + miniShakeItems.reduce((a, i) => a + i.order_qty, 0)}봉
                     </td>
-                    <td className="py-4 px-3 text-right text-purple-700 dark:text-purple-300 font-mono font-bold">
+                    <td className="py-4 px-3 text-right text-purple-700 dark:text-purple-300 font-mono font-bold whitespace-nowrap">
                       {roundHalf(halfpackItems.reduce((a, i) => a + i.order_qty, 0) / 2.0 + combinedMiniShakeRows.reduce((a, r) => a + r.panels, 0))}판
                     </td>
-                    <td className="py-4 px-3 text-right text-indigo-700 dark:text-indigo-300 font-mono font-bold">
+                    <td className="py-4 px-3 text-right text-indigo-700 dark:text-indigo-300 font-mono font-bold whitespace-nowrap">
                       {combinedTriangleRows.reduce((a, r) => a + r.stickPanels, 0)}판
                     </td>
-                    <td className="py-4 px-3 text-right text-sky-700 dark:text-sky-300 font-mono font-bold">
+                    <td className="py-4 px-3 text-right text-sky-700 dark:text-sky-300 font-mono font-bold whitespace-nowrap">
                       {combinedMiniShakeRows.reduce((a, r) => a + r.excessBags, 0)}봉
                     </td>
-                    <td className="py-4 px-3 text-right text-amber-300 font-bold">
+                    <td className="py-4 px-3 text-right text-amber-300 font-bold whitespace-nowrap">
                       {combinedTriangleRows.reduce((a, r) => a + r.excessQty, 0) + combinedBarRows.reduce((a, r) => a + r.excessQty, 0)}개
                     </td>
-                    <td className="py-4 px-3 text-right text-indigo-300 font-bold">
+                    <td className="py-4 px-3 text-right text-indigo-300 font-bold whitespace-nowrap">
                       {combinedTriangleRows.reduce((a, r) => a + r.stickExcessPacks, 0)}팩
                     </td>
                   </tr>

@@ -244,38 +244,38 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
         <table className="w-full border-collapse text-[10px] mb-1.5 border border-gray-300 leading-tight">
           <thead>
             <tr className="bg-gray-100 text-gray-900 font-bold text-center border-b border-gray-300 text-[10px]">
-              <th colSpan={2} className="border border-gray-300 py-0.5 px-1 text-gray-800">오븐</th>
+              <th colSpan={2} className="border border-gray-300 py-0.5 px-1 text-gray-800 whitespace-nowrap">오븐</th>
               <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-left whitespace-nowrap">제품명</th>
 
               {/* Key Panel Header: 최종 필요 판수 (Moved right next to Product Name) */}
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-emerald-200 text-emerald-950 font-black text-xs">최종 필요 판수</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-emerald-200 text-emerald-950 font-black text-xs whitespace-nowrap">최종 필요 판수</th>
 
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right">주문량</th>
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right">추가량</th>
-              {showRequiredQty && <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-gray-50 text-gray-800">필요량</th>}
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right text-gray-600">이월재고</th>
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-amber-50 text-amber-950 font-bold">필요생산량</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right whitespace-nowrap">주문량</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right whitespace-nowrap">추가량</th>
+              {showRequiredQty && <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-gray-50 text-gray-800 whitespace-nowrap">필요량</th>}
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right text-gray-600 whitespace-nowrap">이월재고</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-amber-50 text-amber-950 font-bold whitespace-nowrap">필요생산량</th>
               
               {/* 1. Key Panel Header */}
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-amber-100 text-amber-950 font-extrabold text-[10.5px]">삼각&바 판수</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-amber-100 text-amber-950 font-extrabold text-[10.5px] whitespace-nowrap">삼각&바 판수</th>
               
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-purple-50 text-purple-900">하프/쉐이크(봉)</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-purple-50 text-purple-900 whitespace-nowrap">하프/쉐이크(봉)</th>
               
               {/* 2. Key Panel Header */}
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-purple-100 text-purple-950 font-extrabold text-[10.5px]">하프/쉐이크 판수</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-purple-100 text-purple-950 font-extrabold text-[10.5px] whitespace-nowrap">하프/쉐이크 판수</th>
               
               {/* 3. Key Panel Header */}
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-blue-100 text-blue-950 font-extrabold text-[10.5px]">스틱 판수</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-blue-100 text-blue-950 font-extrabold text-[10.5px] whitespace-nowrap">스틱 판수</th>
               
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-sky-50 text-sky-900">쉐이크 남음(봉)</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-sky-50 text-sky-900 whitespace-nowrap">쉐이크 남음(봉)</th>
               
               {/* Separate Excess Headers */}
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right">삼각/바 남음</th>
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right">스틱 남음</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right whitespace-nowrap">삼각/바 남음</th>
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right whitespace-nowrap">스틱 남음</th>
             </tr>
             <tr className="bg-gray-100 text-gray-900 font-bold text-[9px] text-center border-b border-gray-300">
-              <th className="border border-gray-300 p-0.5">삼각/바</th>
-              <th className="border border-gray-300 p-0.5 text-purple-900">스틱/큐브</th>
+              <th className="border border-gray-300 p-0.5 whitespace-nowrap">삼각/바</th>
+              <th className="border border-gray-300 p-0.5 text-purple-900 whitespace-nowrap">스틱/큐브</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">

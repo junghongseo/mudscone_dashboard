@@ -38,6 +38,7 @@ export interface BrandStrategyData {
   englishName: string;
   tagline: string;
   themeColor: string;
+  accentColor?: string;
   revenue: RevenueGoal;
   businesses: BusinessItem[];
   factors: StrategyFactor[];

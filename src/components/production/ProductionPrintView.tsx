@@ -1,99 +1,162 @@
 import React from 'react';
-import { ProductionItem } from '../../types/production';
+import { CombinedSconeRow, CombinedMiniShakeRow } from '../../types/production';
+import { calculateOvenBakingInfo } from '../../utils/productionDoughCalculator';
 import { Printer, ArrowLeft } from 'lucide-react';
-import { calculateCombinedSconeRows, roundHalf } from '../../utils/productionDoughCalculator';
 
 interface ProductionPrintViewProps {
-  items: ProductionItem[];
   recordDate: string;
-  showRequiredQty?: boolean;
-  shipmentCount?: number;
+  shipmentCount: number;
+  combinedTriangleRows: CombinedSconeRow[];
+  combinedBarRows: CombinedSconeRow[];
+  miniShakeRows: CombinedMiniShakeRow[];
+  serviceRequiredQty: number;
+  excessServiceCount: number;
+  shortageServiceCount: number;
+  totalLeftoverStock: number;
+  heavyCreamDisplayStr: string;
+  greekYogurtQty: number;
+  oppQty: number;
+  greenOnionQty: number;
+  peanutSmoothQty: number;
+  peanutCrunchQty: number;
+  starterPackQty: number;
+  imagineQty: number;
+  yoffMatchaQty: number;
+  yoffKinakoQty: number;
+  yoff6Qty: number;
   onBack: () => void;
 }
 
 export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
-  items,
   recordDate,
-  showRequiredQty = true,
-  shipmentCount = 0,
+  shipmentCount,
+  combinedTriangleRows,
+  combinedBarRows,
+  miniShakeRows,
+  serviceRequiredQty,
+  excessServiceCount,
+  shortageServiceCount,
+  totalLeftoverStock,
+  heavyCreamDisplayStr,
+  greekYogurtQty,
+  oppQty,
+  greenOnionQty,
+  peanutSmoothQty,
+  peanutCrunchQty,
+  starterPackQty,
+  imagineQty,
+  yoffMatchaQty,
+  yoffKinakoQty,
+  yoff6Qty,
   onBack,
 }) => {
   const handlePrint = () => {
     window.print();
   };
 
-  const {
-    combinedTriangleRows,
-    combinedBarRows,
-    combinedMiniShakeRows,
-    unifiedRows,
-    ovenBakingRows,
-    grandTotalAllPanels,
-    halfpackItems,
-    miniShakeItems,
-  } = calculateCombinedSconeRows(items);
+  const showRequiredQty =
+    combinedTriangleRows.some((r) => (r.sconeItem.extra_qty || 0) > 0 || (r.sconeItem.rollover_qty || 0) > 0) ||
+    combinedBarRows.some((r) => (r.sconeItem.extra_qty || 0) > 0 || (r.sconeItem.rollover_qty || 0) > 0);
 
-  const totalTrianglePanels = combinedTriangleRows.reduce((a, r) => a + r.finalPanels, 0);
-  const totalBarPanels = combinedBarRows.reduce((a, r) => a + r.finalPanels, 0);
-  const totalMiniShakePanels = combinedMiniShakeRows.reduce((a, r) => a + r.panels, 0);
-  const sconeItemsOnly = items.filter((i) => i.category === '삼각' || i.category === '바');
+  const totalTrianglePanels = combinedTriangleRows.reduce((a, r) => a + r.finalRequiredPanels, 0);
+  const totalBarPanels = combinedBarRows.reduce((a, r) => a + r.finalRequiredPanels, 0);
+  const totalMiniShakePanels = miniShakeRows.reduce((a, r) => a + r.requiredPanels, 0);
 
-  // Service Scones Calculation - STRICT: ONLY items explicitly confirmed as category '서비스'
-  const serviceItems = items.filter(
-    (i) => i.category === '서비스' && i.is_confirmed === true
-  );
-  const serviceRequiredQty = serviceItems.reduce((a, i) => a + i.required_qty, 0);
+  const grandTotalAllPanels = totalTrianglePanels + totalBarPanels + totalMiniShakePanels;
 
-  const leftoverTriangles = combinedTriangleRows.reduce((a, r) => a + r.excessQty, 0) + combinedBarRows.reduce((a, r) => a + r.excessQty, 0);
-  const leftoverSticks = combinedTriangleRows.reduce((a, r) => a + r.stickExcessPacks, 0);
-  const totalLeftoverStock = leftoverTriangles + leftoverSticks;
+  // Build unified table rows
+  const unifiedRows: (
+    | { type: 'scone'; categoryTag: string; categoryColorClass: string; row: CombinedSconeRow }
+    | { type: 'shake'; row: CombinedMiniShakeRow }
+    | { type: 'separator' }
+  )[] = [];
 
-  const shortageServiceCount = serviceRequiredQty > totalLeftoverStock ? (serviceRequiredQty - totalLeftoverStock) : 0;
-  const excessServiceCount = totalLeftoverStock > serviceRequiredQty ? (totalLeftoverStock - serviceRequiredQty) : 0;
-
-  // Other Auxiliary Items Aggregation - Checks parent_scone_name AND product_name
-  const getMiscItemQty = (targetNames: string[]) => {
-    const matched = items.filter(
-      (i) =>
-        i.category === '기타' &&
-        i.is_confirmed === true &&
-        targetNames.some((tn) =>
-          (i.parent_scone_name && i.parent_scone_name.trim().toLowerCase() === tn.trim().toLowerCase()) ||
-          (i.product_name && i.product_name.trim().toLowerCase() === tn.trim().toLowerCase())
-        )
-    );
-    return matched.reduce((a, i) => a + i.order_qty, 0);
-  };
-
-  const sconeHeavyCreamTotalGrams = combinedTriangleRows.reduce(
-    (sum, r) => sum + ((r.sconeItem.heavy_cream_per_panel || 0) * r.finalPanels),
-    0
-  ) + combinedBarRows.reduce(
-    (sum, r) => sum + ((r.sconeItem.heavy_cream_per_panel || 0) * r.finalPanels),
-    0
-  );
-
-  const greekYogurtQty = getMiscItemQty(['그릭요거트', '요거트']);
-  const oppQty = getMiscItemQty(['opp', 'opp비닐']);
-  const greenOnionQty = getMiscItemQty(['대파분태', '대파']);
-  const peanutSmoothQty = getMiscItemQty(['피넛스무스']);
-  const peanutCrunchQty = getMiscItemQty(['피넛크런치']);
-  const starterPackQty = getMiscItemQty(['스타터팩']);
-  const imagineQty = getMiscItemQty(['이매진']);
-  const manualHeavyCreamMisc = getMiscItemQty(['필요 유크림', '유크림']);
-  const totalHeavyCreamGrams = sconeHeavyCreamTotalGrams + manualHeavyCreamMisc;
-  const heavyCreamDisplayStr = totalHeavyCreamGrams > 0 ? (totalHeavyCreamGrams / 1000.0).toFixed(1) : '0';
-  const yoffMatchaQty = getMiscItemQty(['요프 (말차)', '요프말차', '말차 요프', '요프 말차']);
-  const yoffKinakoQty = getMiscItemQty(['요프 (콩가루)', '요프콩가루', '콩가루 요프', '요프 콩가루']);
-  const yoff6Qty = getMiscItemQty(['요프 (6종)', '요프6종', '요프 6종']);
-
-  const formatOvenNumber = (baseOven?: string, secOven?: string) => {
-    const primary = baseOven || '1';
-    if (secOven) {
-      return `${primary}(삼각&바) / ${secOven}(스틱&큐브)`;
+  combinedTriangleRows.forEach((row) => {
+    if (row.sconeItem.is_separator) {
+      unifiedRows.push({ type: 'separator' });
+    } else {
+      unifiedRows.push({
+        type: 'scone',
+        categoryTag: '삼각',
+        categoryColorClass: 'bg-amber-100 text-amber-900 font-black',
+        row,
+      });
     }
-    return `${primary}(삼각&바)`;
-  };
+  });
+
+  combinedBarRows.forEach((row) => {
+    if (row.sconeItem.is_separator) {
+      unifiedRows.push({ type: 'separator' });
+    } else {
+      unifiedRows.push({
+        type: 'scone',
+        categoryTag: '바',
+        categoryColorClass: 'bg-orange-100 text-orange-900 font-black',
+        row,
+      });
+    }
+  });
+
+  miniShakeRows.forEach((row) => {
+    unifiedRows.push({
+      type: 'shake',
+      row,
+    });
+  });
+
+  // Oven Baking Rows (Triangle & Bar Scones)
+  const ovenBakingRows: {
+    product_name: string;
+    oven_number: string;
+    total_panels: number;
+    full_pans: number;
+    remainder_panels: number;
+    is_separator?: boolean;
+  }[] = [];
+
+  combinedTriangleRows.forEach((row) => {
+    if (row.sconeItem.is_separator) {
+      ovenBakingRows.push({
+        product_name: '',
+        oven_number: '',
+        total_panels: 0,
+        full_pans: 0,
+        remainder_panels: 0,
+        is_separator: true,
+      });
+    } else {
+      const baking = calculateOvenBakingInfo(row.triDoughPanels);
+      ovenBakingRows.push({
+        product_name: row.sconeItem.name,
+        oven_number: row.sconeItem.oven_number || '-',
+        total_panels: row.triDoughPanels,
+        full_pans: baking.full_pans,
+        remainder_panels: baking.remainder_panels,
+      });
+    }
+  });
+
+  combinedBarRows.forEach((row) => {
+    if (row.sconeItem.is_separator) {
+      ovenBakingRows.push({
+        product_name: '',
+        oven_number: '',
+        total_panels: 0,
+        full_pans: 0,
+        remainder_panels: 0,
+        is_separator: true,
+      });
+    } else {
+      const baking = calculateOvenBakingInfo(row.triDoughPanels);
+      ovenBakingRows.push({
+        product_name: row.sconeItem.name,
+        oven_number: row.sconeItem.oven_number || '-',
+        total_panels: row.triDoughPanels,
+        full_pans: baking.full_pans,
+        remainder_panels: baking.remainder_panels,
+      });
+    }
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 print:p-0 print:bg-white print:text-black">
@@ -117,6 +180,11 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
             padding: 0 !important;
             box-shadow: none !important;
           }
+          .page-break-before {
+            page-break-before: always !important;
+            break-before: page !important;
+            margin-top: 1rem !important;
+          }
         }
       `}</style>
 
@@ -139,18 +207,18 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
       {/* Printable Area */}
       <div className="print-container max-w-6xl mx-auto bg-white text-black p-6 rounded-xl shadow-xl print:p-2">
         {/* Header */}
-        <div className="border-b-2 border-black pb-3 mb-3 flex justify-between items-end">
+        <div className="border-b border-gray-400 pb-2 mb-3 flex justify-between items-end">
           <div>
-            <h1 className="text-2xl font-black tracking-tight uppercase">머드스콘 일별 생산 요약표</h1>
+            <h1 className="text-xl font-black tracking-tight uppercase text-gray-900">머드스콘 일별 생산 요약표</h1>
           </div>
           <div className="text-right">
-            <span className="text-xs text-gray-500 block">생산 일자</span>
-            <span className="text-lg font-bold text-gray-900">{recordDate}</span>
+            <span className="text-[11px] text-gray-500 block">생산 일자</span>
+            <span className="text-base font-bold text-gray-900">{recordDate}</span>
           </div>
         </div>
 
-        {/* Top 2 Cards for Service Scones & Auxiliary Materials (Hidden when printing) */}
-        <div className="grid grid-cols-12 gap-3 mb-3 border border-gray-400 p-2.5 rounded-lg bg-gray-50 text-xs print:hidden">
+        {/* Top 2 Cards for Service Scones & Auxiliary Materials (Included in print on Page 1) */}
+        <div className="grid grid-cols-12 gap-3 mb-3 border border-gray-300 p-2.5 rounded-lg bg-gray-50 text-xs">
           {/* Service Scone Table */}
           <div className="col-span-4 border-r border-gray-300 pr-3">
             <div className="text-xs font-bold text-purple-900 mb-1 flex justify-between">
@@ -245,40 +313,40 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
         </div>
 
         {/* Main Production Table */}
-        <table className="w-full border-collapse text-xs mb-3">
+        <table className="w-full border-collapse text-xs mb-3 border border-gray-300">
           <thead>
-            <tr className="bg-gray-800 text-white font-bold text-center">
-              <th colSpan={2} className="border border-gray-800 p-1 text-amber-300">오븐</th>
-              <th rowSpan={2} className="border border-gray-800 p-1 text-left">제품명</th>
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right">주문량</th>
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right">추가량</th>
-              {showRequiredQty && <th rowSpan={2} className="border border-gray-800 p-1 text-right bg-amber-950 text-amber-200">필요량</th>}
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right text-gray-300">이월재고</th>
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right bg-amber-900 text-amber-100 font-black">필요생산량</th>
+            <tr className="bg-gray-100 text-gray-900 font-bold text-center border-b border-gray-300">
+              <th colSpan={2} className="border border-gray-300 p-1 text-amber-800">오븐</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-left">제품명</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right">주문량</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right">추가량</th>
+              {showRequiredQty && <th rowSpan={2} className="border border-gray-300 p-1 text-right bg-amber-100 text-amber-950 font-bold">필요량</th>}
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right text-gray-600">이월재고</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right bg-amber-100 text-amber-950 font-black">필요생산량</th>
               
               {/* 1. Key Panel Header */}
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right bg-amber-700 text-white font-extrabold">삼각&바 필요 판수</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right bg-amber-700 text-white font-extrabold">삼각&바 필요 판수</th>
               
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right bg-purple-950 text-purple-200">하프팩/쉐이크 (봉)</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right bg-purple-950 text-purple-200">하프팩/쉐이크 (봉)</th>
               
               {/* 2. Key Panel Header */}
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right bg-purple-800 text-white font-extrabold">하프팩/쉐이크 판수</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right bg-purple-800 text-white font-extrabold">하프팩/쉐이크 판수</th>
               
               {/* 3. Key Panel Header */}
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right bg-indigo-800 text-white font-extrabold">스틱 판수</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right bg-indigo-800 text-white font-extrabold">스틱 판수</th>
               
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right bg-sky-950 text-sky-200 font-bold">미니쉐이크 남는 수량 (봉)</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right bg-sky-950 text-sky-200 font-bold">미니쉐이크 남는 수량 (봉)</th>
               
               {/* 4. Key Panel Header */}
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right bg-emerald-700 text-white font-black text-sm">통합 최종 필요 판수</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right bg-emerald-700 text-white font-black text-sm">통합 최종 필요 판수</th>
               
               {/* Separate Excess Headers */}
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right">삼각/바 남음</th>
-              <th rowSpan={2} className="border border-gray-800 p-1 text-right">스틱 남음</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right">삼각/바 남음</th>
+              <th rowSpan={2} className="border border-gray-300 p-1 text-right">스틱 남음</th>
             </tr>
-            <tr className="bg-gray-800 text-amber-200 font-bold text-[10px] text-center border-b border-gray-700">
-              <th className="border border-gray-800 p-0.5">삼각 / 바</th>
-              <th className="border border-gray-800 p-0.5 text-purple-200">스틱 / 큐브</th>
+            <tr className="bg-gray-100 text-gray-900 font-bold text-[10px] text-center border-b border-gray-300">
+              <th className="border border-gray-300 p-0.5">삼각 / 바</th>
+              <th className="border border-gray-300 p-0.5 text-purple-900">스틱 / 큐브</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
@@ -293,105 +361,174 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                 const row = uRow.row;
                 const secOven = row.matchedHp?.oven_number || row.matchedStick?.oven_number;
                 const isBar = row.sconeItem.category === '바';
+
                 return (
-                  <tr key={`scone-${idx}`} className={isBar ? "bg-gray-50" : "bg-white"}>
-                    <td className="border border-gray-300 p-1 text-center font-bold text-amber-950">{row.sconeItem.oven_number || '1'}</td>
-                    <td className="border border-gray-300 p-1 text-center font-bold text-purple-900">{secOven || '-'}</td>
-                    <td className="border border-gray-300 p-1 font-bold text-gray-900">{row.sconeItem.product_name}</td>
-                    <td className="border border-gray-300 p-1 text-right">{row.sconeItem.order_qty}개</td>
-                    <td className="border border-gray-300 p-1 text-right text-gray-600">{row.sconeItem.extra_qty}개</td>
-                    {showRequiredQty && <td className="border border-gray-300 p-1 text-right font-bold text-amber-900 bg-amber-50">{row.sconeItem.required_qty}개</td>}
-                    <td className="border border-gray-300 p-1 text-right text-gray-600">{row.sconeItem.carryover_qty}개</td>
-                    <td className="border border-gray-300 p-1 text-right font-bold text-gray-900 bg-amber-50">{row.sconeItem.production_qty}개</td>
-                    
-                    {/* 1. Key Panel Cell */}
-                    <td className="border border-gray-300 p-1 text-right font-black text-amber-900 bg-amber-100">{row.sconeDoughPanels}판</td>
-                    
-                    <td className="border border-gray-300 p-1 text-right text-purple-900 bg-purple-50 font-bold">{row.hpOrderBags > 0 ? `${row.hpOrderBags}봉` : '0봉'}</td>
-                    
-                    {/* 2. Key Panel Cell */}
-                    <td className="border border-gray-300 p-1 text-right text-purple-950 bg-purple-100 font-black">{row.hpPanels}판</td>
-                    
-                    {/* 3. Key Panel Cell */}
-                    <td className="border border-gray-300 p-1 text-right text-indigo-950 bg-indigo-100 font-black">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
-                    
-                    <td className="border border-gray-300 p-1 text-center text-gray-400">-</td>
-                    
-                    {/* 4. Key Panel Cell */}
-                    <td className="border border-gray-300 p-1 text-right font-black text-sm text-emerald-950 bg-emerald-100">{row.finalPanels}판</td>
-                    
-                    <td className="border border-gray-300 p-1 text-right font-bold text-gray-800">
-                      {row.excessQty > 0 ? `${row.excessQty}개` : '0개'}
+                  <tr key={`scone-${row.sconeItem.name}-${idx}`} className="bg-white hover:bg-gray-50">
+                    <td className="border border-gray-300 p-1 text-center font-bold text-amber-900">
+                      {row.sconeItem.oven_number || '-'}
                     </td>
-                    <td className="border border-gray-300 p-1 text-right text-indigo-900 font-bold">{row.stickExcessPacks > 0 ? `${row.stickExcessPacks}팩` : '-'}</td>
+                    <td className="border border-gray-300 p-1 text-center font-bold text-purple-900">
+                      {secOven || '-'}
+                    </td>
+                    <td className="border border-gray-300 p-1 font-bold text-gray-900 text-left">
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] mr-1.5 ${uRow.categoryColorClass}`}>
+                        {uRow.categoryTag}
+                      </span>
+                      {row.sconeItem.name}
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-medium text-gray-700">
+                      {row.sconeItem.order_qty}개
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-medium text-gray-700">
+                      {row.sconeItem.extra_qty ? `${row.sconeItem.extra_qty}개` : '-'}
+                    </td>
+
+                    {showRequiredQty && (
+                      <td className="border border-gray-300 p-1 text-right font-bold text-amber-950 bg-amber-50">
+                        {row.sconeItem.required_qty}개
+                      </td>
+                    )}
+
+                    <td className="border border-gray-300 p-1 text-right text-gray-500 font-medium">
+                      {row.sconeItem.rollover_qty ? `${row.sconeItem.rollover_qty}개` : '-'}
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-black text-amber-950 bg-amber-100">
+                      {row.sconeItem.production_qty}개
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-black text-amber-950 bg-amber-50">
+                      {row.triDoughPanels}판
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-medium text-purple-900">
+                      {row.hpOrderBags ? `${row.hpOrderBags}봉` : '-'}
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-bold text-purple-950 bg-purple-50">
+                      {row.hpPanels ? `${row.hpPanels}판` : '-'}
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-bold text-indigo-950 bg-indigo-50">
+                      {row.stickPanels ? `${row.stickPanels}판` : '-'}
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-medium text-sky-900">-</td>
+
+                    <td className="border border-gray-300 p-1 text-right font-black text-emerald-950 bg-emerald-100 text-sm">
+                      {row.finalRequiredPanels}판
+                    </td>
+
+                    <td className={`border border-gray-300 p-1 text-right font-bold ${row.excessQty > 0 ? 'text-blue-700 bg-blue-50' : 'text-gray-400'}`}>
+                      {row.excessQty}개
+                    </td>
+
+                    <td className={`border border-gray-300 p-1 text-right font-bold ${row.stickExcessPacks > 0 ? 'text-indigo-700 bg-indigo-50' : 'text-gray-400'}`}>
+                      {row.stickExcessPacks}팩
+                    </td>
                   </tr>
                 );
-              } else {
-                const row = uRow.row;
+              } else if (uRow.type === 'shake') {
+                const sRow = uRow.row;
                 return (
-                  <tr key={`shake-${idx}`} className="bg-sky-50/50">
-                    <td className="border border-gray-300 p-1 text-center text-gray-400">-</td>
-                    <td className="border border-gray-300 p-1 text-center font-bold text-sky-950">{row.shakeItem.oven_number || '1'}</td>
-                    <td className="border border-gray-300 p-1 font-bold text-gray-900">{row.shakeItem.product_name}</td>
-                    <td className="border border-gray-300 p-1 text-right">{row.orderBags}봉</td>
-                    <td className="border border-gray-300 p-1 text-right text-gray-600">{row.extraBags}봉</td>
-                    {showRequiredQty && <td className="border border-gray-300 p-1 text-right font-bold text-amber-900 bg-amber-50">{row.orderBags + row.extraBags}봉</td>}
-                    <td className="border border-gray-300 p-1 text-right text-gray-600">{row.carryoverBags}봉</td>
-                    <td className="border border-gray-300 p-1 text-center text-gray-400">-</td>
-                    
-                    {/* 1. Key Panel Cell */}
-                    <td className="border border-gray-300 p-1 text-center text-gray-400">-</td>
-                    
-                    <td className="border border-gray-300 p-1 text-right text-purple-900 bg-purple-50 font-bold">{row.prodBags}봉</td>
-                    
-                    {/* 2. Key Panel Cell */}
-                    <td className="border border-gray-300 p-1 text-right text-purple-950 bg-purple-100 font-black">{row.panels}판</td>
-                    
-                    {/* 3. Key Panel Cell */}
-                    <td className="border border-gray-300 p-1 text-center text-gray-400">-</td>
-                    
-                    <td className="border border-gray-300 p-1 text-right font-bold text-sky-900 bg-sky-100">{row.excessBags}봉</td>
-                    
-                    {/* 4. Key Panel Cell */}
-                    <td className="border border-gray-300 p-1 text-right font-black text-sm text-emerald-950 bg-emerald-100">{row.panels}판</td>
-                    
-                    <td className="border border-gray-300 p-1 text-center text-gray-400">-</td>
-                    <td className="border border-gray-300 p-1 text-center text-gray-400">-</td>
+                  <tr key={`shake-${sRow.name}-${idx}`} className="bg-sky-50/40 hover:bg-sky-50">
+                    <td className="border border-gray-300 p-1 text-center font-bold text-gray-400">-</td>
+                    <td className="border border-gray-300 p-1 text-center font-bold text-purple-900">
+                      {sRow.oven_number || '-'}
+                    </td>
+                    <td className="border border-gray-300 p-1 font-bold text-gray-900 text-left">
+                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] mr-1.5 bg-sky-200 text-sky-950 font-black">
+                        쉐이크
+                      </span>
+                      {sRow.name}
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-medium text-gray-700">
+                      {sRow.order_bags}봉
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-medium text-gray-700">
+                      {sRow.extra_qty ? `${sRow.extra_qty}봉` : '-'}
+                    </td>
+
+                    {showRequiredQty && (
+                      <td className="border border-gray-300 p-1 text-right font-bold text-sky-950 bg-sky-100">
+                        {sRow.required_bags}봉
+                      </td>
+                    )}
+
+                    <td className="border border-gray-300 p-1 text-right text-gray-500 font-medium">
+                      {sRow.rollover_qty ? `${sRow.rollover_qty}봉` : '-'}
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-black text-sky-950 bg-sky-100">
+                      {sRow.production_bags}봉
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-medium text-gray-400">-</td>
+
+                    <td className="border border-gray-300 p-1 text-right font-bold text-purple-950 bg-purple-50">
+                      {sRow.production_bags}봉
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-bold text-purple-950 bg-purple-50">
+                      {sRow.requiredPanels}판
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-medium text-gray-400">-</td>
+
+                    <td className={`border border-gray-300 p-1 text-right font-bold ${sRow.remainderBags > 0 ? 'text-sky-700 bg-sky-100' : 'text-gray-400'}`}>
+                      {sRow.remainderBags}봉
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right font-black text-emerald-950 bg-emerald-100 text-sm">
+                      {sRow.requiredPanels}판
+                    </td>
+
+                    <td className="border border-gray-300 p-1 text-right text-gray-400">-</td>
+
+                    <td className="border border-gray-300 p-1 text-right text-gray-400">-</td>
                   </tr>
                 );
               }
             })}
           </tbody>
+
+          {/* Table Footer Totals */}
           <tfoot>
-            <tr className="bg-gray-200 font-bold border-t-2 border-black">
-              <td colSpan={3} className="border border-gray-400 p-1 text-center font-black">전체 총 합계</td>
-              <td className="border border-gray-400 p-1 text-center text-gray-500">-</td>
-              <td className="border border-gray-400 p-1 text-center text-gray-500">-</td>
-              {showRequiredQty && <td className="border border-gray-400 p-1 text-center text-gray-500">-</td>}
-              <td className="border border-gray-400 p-1 text-center text-gray-500">-</td>
-              <td className="border border-gray-400 p-1 text-right font-bold">{sconeItemsOnly.reduce((acc, i) => acc + i.production_qty, 0)}개</td>
-              <td className="border border-gray-400 p-1 text-right font-black text-amber-950 bg-amber-100">
-                {roundHalf(combinedTriangleRows.reduce((a, r) => a + r.sconeDoughPanels, 0) + combinedBarRows.reduce((a, r) => a + r.sconeDoughPanels, 0))}판
+            <tr className="bg-gray-100 font-black text-gray-900 border-t border-gray-300 text-right">
+              <td colSpan={showRequiredQty ? 8 : 7} className="border border-gray-300 p-1.5 text-center text-xs">
+                합계 (총 {grandTotalAllPanels} 판)
               </td>
-              <td className="border border-gray-400 p-1 text-right font-bold">
-                {items.filter(i => i.category === '미니큐브' || i.category === '미니쉐이크').reduce((a, i) => a + i.order_qty, 0)}봉
+              <td className="border border-gray-300 p-1.5 bg-amber-100 text-amber-950">
+                {totalTrianglePanels + totalBarPanels}판
               </td>
-              <td className="border border-gray-400 p-1 text-right font-black text-purple-950 bg-purple-100">
-                {roundHalf(items.filter(i => i.category === '미니큐브').reduce((a, i) => a + i.order_qty, 0) / 2.0 + totalMiniShakePanels)}판
+              <td className="border border-gray-300 p-1.5">
+                {combinedTriangleRows.reduce((a, r) => a + r.hpOrderBags, 0) +
+                  combinedBarRows.reduce((a, r) => a + r.hpOrderBags, 0)}봉
               </td>
-              <td className="border border-gray-400 p-1 text-right font-black text-indigo-950 bg-indigo-100">
-                {combinedTriangleRows.reduce((a, r) => a + r.stickPanels, 0)}판
+              <td className="border border-gray-300 p-1.5 bg-purple-100 text-purple-950">
+                {combinedTriangleRows.reduce((a, r) => a + r.hpPanels, 0) +
+                  combinedBarRows.reduce((a, r) => a + r.hpPanels, 0) +
+                  totalMiniShakePanels}판
               </td>
-              <td className="border border-gray-400 p-1 text-right font-bold text-sky-950">
-                {combinedMiniShakeRows.reduce((a, r) => a + r.excessBags, 0)}봉
+              <td className="border border-gray-300 p-1.5 bg-indigo-100 text-indigo-950">
+                {combinedTriangleRows.reduce((a, r) => a + r.stickPanels, 0) +
+                  combinedBarRows.reduce((a, r) => a + r.stickPanels, 0)}판
               </td>
-              <td className="border border-gray-400 p-1 text-right font-black text-base text-emerald-950 bg-emerald-100">
-                {grandTotalAllPanels} 판
+              <td className="border border-gray-300 p-1.5 bg-sky-100 text-sky-950">
+                {miniShakeRows.reduce((a, r) => a + r.remainderBags, 0)}봉
               </td>
-              <td className="border border-gray-400 p-1 text-right font-bold text-gray-900">
-                {combinedTriangleRows.reduce((a, r) => a + r.excessQty, 0) + combinedBarRows.reduce((a, r) => a + r.excessQty, 0)}개
+              <td className="border border-gray-300 p-1.5 bg-emerald-200 text-emerald-950 text-sm font-black">
+                {grandTotalAllPanels}판
               </td>
-              <td className="border border-gray-400 p-1 text-right font-bold text-indigo-900">
+              <td className="border border-gray-300 p-1.5 bg-blue-100 text-blue-950">
+                {combinedTriangleRows.reduce((a, r) => a + r.excessQty, 0) +
+                  combinedBarRows.reduce((a, r) => a + r.excessQty, 0)}개
+              </td>
+              <td className="border border-gray-300 p-1.5 bg-indigo-100 text-indigo-950">
                 {combinedTriangleRows.reduce((a, r) => a + r.stickExcessPacks, 0)}팩
               </td>
             </tr>
@@ -399,20 +536,20 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
         </table>
 
         {/* Oven Baking Dedicated Table for Print */}
-        <div className="mt-6 break-before-auto">
+        <div className="mt-6 page-break-before">
           <div className="flex items-center gap-2 mb-1.5">
-            <h3 className="font-extrabold text-sm text-gray-900 border-b-2 border-black pb-0.5">
+            <h3 className="font-extrabold text-sm text-gray-900 border-b border-gray-400 pb-0.5">
               🔥 삼각 & 바 스콘 오븐 굽기 작업표 (풀팬 3판 기준)
             </h3>
           </div>
-          <table className="w-full text-xs text-center border-collapse border border-gray-800">
+          <table className="w-full text-xs text-center border-collapse border border-gray-300">
             <thead>
-              <tr className="bg-gray-200 font-extrabold border-b border-gray-800">
-                <th className="border border-gray-800 p-1 text-left">상품명</th>
-                <th className="border border-gray-800 p-1 w-20">오븐번호</th>
-                <th className="border border-gray-800 p-1 w-24 bg-amber-100">삼각(바)판수</th>
-                <th className="border border-gray-800 p-1 w-24 bg-indigo-100">풀팬(3판)</th>
-                <th className="border border-gray-800 p-1 w-28 bg-sky-100">남는 반죽 판수</th>
+              <tr className="bg-gray-100 font-extrabold border-b border-gray-300">
+                <th className="border border-gray-300 p-1 text-left">상품명</th>
+                <th className="border border-gray-300 p-1 w-20">오븐번호</th>
+                <th className="border border-gray-300 p-1 w-24 bg-amber-100">삼각(바)판수</th>
+                <th className="border border-gray-300 p-1 w-24 bg-indigo-100">풀팬(3판)</th>
+                <th className="border border-gray-300 p-1 w-28 bg-sky-100">남는 반죽 판수</th>
               </tr>
             </thead>
             <tbody>

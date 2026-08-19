@@ -21,12 +21,14 @@ export interface BusinessItem {
   isSelf: boolean;
   color?: string;
   tagline?: string;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
 }
 
 export interface RevenueGoal {
   targetAmount: number;
   currentAmount: number;
   year: number;
+  unit?: string;
 }
 
 export interface BrandStrategyData {

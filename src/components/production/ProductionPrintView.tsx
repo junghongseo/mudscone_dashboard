@@ -246,6 +246,10 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
             <tr className="bg-gray-100 text-gray-900 font-bold text-center border-b border-gray-300 text-[10px]">
               <th colSpan={2} className="border border-gray-300 py-0.5 px-1 text-gray-800">오븐</th>
               <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-left whitespace-nowrap">제품명</th>
+
+              {/* Key Panel Header: 최종 필요 판수 (Moved right next to Product Name) */}
+              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-emerald-200 text-emerald-950 font-black text-xs">최종 필요 판수</th>
+
               <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right">주문량</th>
               <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right">추가량</th>
               {showRequiredQty && <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-gray-50 text-gray-800">필요량</th>}
@@ -264,9 +268,6 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
               <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-blue-100 text-blue-950 font-extrabold text-[10.5px]">스틱 판수</th>
               
               <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-sky-50 text-sky-900">쉐이크 남음(봉)</th>
-              
-              {/* 4. Key Panel Header */}
-              <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right bg-emerald-200 text-emerald-950 font-black text-xs">최종 필요 판수</th>
               
               {/* Separate Excess Headers */}
               <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-right">삼각/바 남음</th>
@@ -299,6 +300,10 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                       </span>
                       {row.sconeItem.product_name}
                     </td>
+
+                    {/* Key Panel Cell: 최종 필요 판수 (Moved right next to Product Name) */}
+                    <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.finalPanels}판</td>
+
                     <td className="border border-gray-300 py-0.5 px-1 text-right text-[10px]">{row.sconeItem.order_qty}개</td>
                     <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.sconeItem.extra_qty ? `${row.sconeItem.extra_qty}개` : '-'}</td>
                     {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 bg-gray-50 text-[10px]">{row.sconeItem.required_qty}개</td>}
@@ -317,9 +322,6 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                     <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-blue-950 bg-blue-50">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
                     
                     <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
-                    
-                    {/* 4. Key Panel Cell */}
-                    <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.finalPanels}판</td>
                     
                     <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.excessQty > 0 ? 'text-blue-700 bg-blue-50/60' : 'text-gray-400'}`}>
                       {row.excessQty > 0 ? `${row.excessQty}개` : '-'}
@@ -341,6 +343,10 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                       </span>
                       {row.shakeItem.product_name}
                     </td>
+
+                    {/* Key Panel Cell: 최종 필요 판수 (Moved right next to Product Name) */}
+                    <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.panels}판</td>
+
                     <td className="border border-gray-300 py-0.5 px-1 text-right text-[10px]">{row.orderBags}봉</td>
                     <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.extraBags ? `${row.extraBags}봉` : '-'}</td>
                     {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 bg-gray-50 text-[10px]">{row.orderBags + row.extraBags}봉</td>}
@@ -362,9 +368,6 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                       {row.excessBags > 0 ? `${row.excessBags}봉` : '-'}
                     </td>
                     
-                    {/* 4. Key Panel Cell */}
-                    <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.panels}판</td>
-                    
                     <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
                     <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
                   </tr>
@@ -375,6 +378,9 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
           <tfoot>
             <tr className="bg-gray-100 font-bold border-t-2 border-gray-400 text-[10px]">
               <td colSpan={3} className="border border-gray-300 py-0.5 px-1 text-center font-black">전체 총 합계</td>
+              <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-sm text-emerald-950 bg-emerald-200">
+                {grandTotalAllPanels} 판
+              </td>
               <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
               <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
               {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>}
@@ -394,9 +400,6 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
               </td>
               <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-sky-950">
                 {combinedMiniShakeRows.reduce((a, r) => a + r.excessBags, 0)}봉
-              </td>
-              <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-sm text-emerald-950 bg-emerald-200">
-                {grandTotalAllPanels} 판
               </td>
               <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900">
                 {combinedTriangleRows.reduce((a, r) => a + r.excessQty, 0) + combinedBarRows.reduce((a, r) => a + r.excessQty, 0)}개

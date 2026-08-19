@@ -30,8 +30,6 @@ export const ProductionMiniShakeRow: React.FC<ProductionMiniShakeRowProps> = ({
 
   return (
     <tr
-      draggable={true}
-      onDragStart={(e) => onDragStart && onDragStart(e, itemIndex)}
       onDragOver={(e) => onDragOver && onDragOver(e, itemIndex)}
       onDrop={(e) => onDrop && onDrop(e, itemIndex)}
       onDragEnd={(e) => onDragEnd && onDragEnd(e)}
@@ -43,8 +41,13 @@ export const ProductionMiniShakeRow: React.FC<ProductionMiniShakeRowProps> = ({
           : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
       }`}
     >
-      {/* 0. Drag & Drop Handle (Very Left End) */}
-      <td className="py-3.5 px-2 text-center text-slate-400 hover:text-amber-500 font-black text-base cursor-grab active:cursor-grabbing select-none print:hidden" title="드래그하여 위치 변경">
+      {/* 0. Drag & Drop Handle (Very Left End - ONLY draggable element) */}
+      <td
+        draggable={true}
+        onDragStart={(e) => onDragStart && onDragStart(e, itemIndex)}
+        className="py-3.5 px-2 text-center text-slate-400 hover:text-amber-500 font-black text-base cursor-grab active:cursor-grabbing select-none print:hidden"
+        title="드래그하여 위치 변경"
+      >
         ⠿
       </td>
 
@@ -59,8 +62,15 @@ export const ProductionMiniShakeRow: React.FC<ProductionMiniShakeRowProps> = ({
       </td>
 
       {/* Product Name (Clean & Uncluttered) */}
-      <td className="py-3.5 px-3 font-bold text-slate-900 dark:text-slate-100">
+      <td className="py-3.5 px-3 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
         {item.product_name}
+      </td>
+
+      {/* 3. Integrated Total Required Panels (Moved right next to Product Name) */}
+      <td className="py-3.5 px-3 text-right bg-emerald-500/5">
+        <span className="inline-block px-3 py-1.5 bg-emerald-500/15 border-2 border-emerald-500/40 text-emerald-300 font-black text-sm rounded-xl shadow-sm">
+          {row.panels} 판
+        </span>
       </td>
 
       {/* Order Qty (Bags) */}
@@ -68,13 +78,18 @@ export const ProductionMiniShakeRow: React.FC<ProductionMiniShakeRowProps> = ({
         {row.orderBags}봉
       </td>
 
-      {/* Extra Qty Input (Bags) */}
+      {/* Extra Qty Input (Bags - Auto-clears on 0 / select on focus) */}
       <td className="py-3.5 px-3 text-right">
         <input
           type="number"
           min="0"
-          value={row.extraBags}
-          onChange={(e) => onQtyChange(row.itemIndex, 'extra_qty', parseInt(e.target.value))}
+          value={row.extraBags === 0 ? '' : row.extraBags}
+          placeholder="0"
+          onFocus={(e) => e.target.select()}
+          onChange={(e) => {
+            const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+            onQtyChange(row.itemIndex, 'extra_qty', isNaN(val) ? 0 : val);
+          }}
           className="w-16 px-2 py-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-amber-500 rounded text-right text-slate-900 dark:text-slate-100 text-xs font-bold"
         />
       </td>
@@ -86,13 +101,18 @@ export const ProductionMiniShakeRow: React.FC<ProductionMiniShakeRowProps> = ({
         </td>
       )}
 
-      {/* Carryover Inventory Input (Bags) */}
+      {/* Carryover Inventory Input (Bags - Auto-clears on 0 / select on focus) */}
       <td className="py-3.5 px-3 text-right">
         <input
           type="number"
           min="0"
-          value={row.carryoverBags}
-          onChange={(e) => onQtyChange(row.itemIndex, 'carryover_qty', parseInt(e.target.value))}
+          value={row.carryoverBags === 0 ? '' : row.carryoverBags}
+          placeholder="0"
+          onFocus={(e) => e.target.select()}
+          onChange={(e) => {
+            const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+            onQtyChange(row.itemIndex, 'carryover_qty', isNaN(val) ? 0 : val);
+          }}
           className="w-16 px-2 py-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-amber-500 rounded text-right text-slate-900 dark:text-slate-100 text-xs font-bold"
         />
       </td>
@@ -102,7 +122,7 @@ export const ProductionMiniShakeRow: React.FC<ProductionMiniShakeRowProps> = ({
         -
       </td>
 
-      {/* 1. Key Panel Column: Triangle & Bar Required Panels (N/A) */}
+      {/* Key Panel Column: Triangle & Bar Required Panels (N/A) */}
       <td className="py-3.5 px-3 text-center text-slate-400">
         -
       </td>
@@ -117,14 +137,14 @@ export const ProductionMiniShakeRow: React.FC<ProductionMiniShakeRowProps> = ({
         {row.prodBags} 봉
       </td>
 
-      {/* 2. Key Panel Column: Halfpack & Mini Shake Panels */}
+      {/* Key Panel Column: Halfpack & Mini Shake Panels */}
       <td className="py-3.5 px-3 bg-purple-500/5 text-right">
         <span className="inline-block px-2.5 py-1 bg-purple-500/10 border border-purple-500/30 text-purple-300 font-extrabold font-mono rounded-lg text-xs">
           {row.panels} 판
         </span>
       </td>
 
-      {/* 3. Key Panel Column: Stick Panels (N/A for Mini Shake) */}
+      {/* Key Panel Column: Stick Panels (N/A for Mini Shake) */}
       <td className="py-3.5 px-3 text-center text-slate-400">
         -
       </td>
@@ -132,13 +152,6 @@ export const ProductionMiniShakeRow: React.FC<ProductionMiniShakeRowProps> = ({
       {/* Dedicated Mini Shake Excess Bags Column */}
       <td className="py-3.5 px-3 text-right font-bold text-sky-700 dark:text-sky-300 bg-sky-500/5 border-r border-sky-500/10">
         {row.excessBags} 봉
-      </td>
-
-      {/* 4. Key Panel Column: Integrated Total Required Panels */}
-      <td className="py-3.5 px-3 text-right">
-        <span className="inline-block px-3 py-1.5 bg-emerald-500/15 border-2 border-emerald-500/40 text-emerald-300 font-black text-sm rounded-xl shadow-sm">
-          {row.panels} 판
-        </span>
       </td>
 
       {/* Separate Excess Column 1: Triangle / Bar Excess (N/A) */}

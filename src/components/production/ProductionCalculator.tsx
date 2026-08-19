@@ -649,7 +649,13 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                     <th colSpan={2} className="py-2 px-3 border-r border-slate-300 dark:border-slate-800 bg-slate-200/50 dark:bg-slate-900 text-amber-400 font-extrabold">
                       오븐
                     </th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-left">제품명</th>
+                    <th rowSpan={2} className="py-3.5 px-3 text-left whitespace-nowrap">제품명</th>
+
+                    {/* Integrated Total Required Panels (Moved right next to Product Name) */}
+                    <th rowSpan={2} className="py-3.5 px-3 text-right bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black text-sm">
+                      통합 최종 필요 판수
+                    </th>
+
                     <th rowSpan={2} className="py-3.5 px-3 text-right">주문량</th>
                     <th rowSpan={2} className="py-3.5 px-3 text-right">추가량</th>
                     {showRequiredQty && (
@@ -683,10 +689,6 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                       미니쉐이크 남는 수량 (봉)
                     </th>
 
-                    <th rowSpan={2} className="py-3.5 px-3 text-right bg-emerald-500/10 text-emerald-400 font-black text-sm">
-                      통합 최종 필요 판수
-                    </th>
-
                     <th rowSpan={2} className="py-3.5 px-3 text-right text-slate-700 dark:text-slate-300 font-bold">삼각/바 남음</th>
                     <th rowSpan={2} className="py-3.5 px-3 text-right text-indigo-400 font-bold">스틱 남음</th>
                   </tr>
@@ -710,8 +712,6 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                       return (
                         <tr
                           key={`sep-${itemIdx}`}
-                          draggable={true}
-                          onDragStart={(e) => handleDragStart(e, itemIdx)}
                           onDragOver={(e) => handleDragOver(e, itemIdx)}
                           onDrop={(e) => handleDropRow(e, itemIdx)}
                           onDragEnd={handleDragEnd}
@@ -723,7 +723,12 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                               : ''
                           }`}
                         >
-                          <td className="py-2.5 px-2 text-center text-slate-400 hover:text-amber-500 font-black text-base cursor-grab active:cursor-grabbing select-none print:hidden" title="드래그하여 위치 변경">
+                          <td
+                            draggable={true}
+                            onDragStart={(e) => handleDragStart(e, itemIdx)}
+                            className="py-2.5 px-2 text-center text-slate-400 hover:text-amber-500 font-black text-base cursor-grab active:cursor-grabbing select-none print:hidden"
+                            title="드래그하여 위치 변경"
+                          >
                             ⠿
                           </td>
                           <td colSpan={showRequiredQty ? 16 : 15} className="py-2.5 px-4 text-center">
@@ -787,6 +792,9 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                     <td colSpan={4} className="py-4 px-3 text-center font-extrabold">
                       전체 총 합계 ({items.length}개 제품)
                     </td>
+                    <td className="py-4 px-3 text-right text-emerald-400 text-xl font-black bg-emerald-500/10">
+                      {grandTotalAllPanels} 판
+                    </td>
                     <td className="py-4 px-3 text-right">{items.reduce((a, i) => a + i.order_qty, 0)}개/봉/팩</td>
                     <td className="py-4 px-3 text-right">{items.reduce((a, i) => a + i.extra_qty, 0)}개/봉/팩</td>
                     {showRequiredQty && (
@@ -813,9 +821,6 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                     </td>
                     <td className="py-4 px-3 text-right text-sky-700 dark:text-sky-300 font-mono font-bold">
                       {combinedMiniShakeRows.reduce((a, r) => a + r.excessBags, 0)}봉
-                    </td>
-                    <td className="py-4 px-3 text-right text-emerald-400 text-xl font-black">
-                      {grandTotalAllPanels} 판
                     </td>
                     <td className="py-4 px-3 text-right text-amber-300 font-bold">
                       {combinedTriangleRows.reduce((a, r) => a + r.excessQty, 0) + combinedBarRows.reduce((a, r) => a + r.excessQty, 0)}개

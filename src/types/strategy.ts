@@ -22,6 +22,7 @@ export interface BusinessItem {
   color?: string;
   tagline?: string;
   lineStyle?: 'solid' | 'dashed' | 'dotted';
+  markerSymbol?: 'circle' | 'square' | 'triangle' | 'diamond';
 }
 
 export interface RevenueGoal {

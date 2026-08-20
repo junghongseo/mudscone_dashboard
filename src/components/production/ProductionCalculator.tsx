@@ -7,6 +7,7 @@ import { recalculateItem, calculateCombinedSconeRows, calculateDoughPortions, ro
 import { ProductionTableRow } from './ProductionTableRow';
 import { ProductionMiniShakeRow } from './ProductionMiniShakeRow';
 import { ProductionPrintView } from './ProductionPrintView';
+import { ShipmentNotesView } from './ShipmentNotesView';
 
 const API_BASE = import.meta.env.VITE_VAT_API_BASE?.replace(/\/api$/, '') || 'http://127.0.0.1:8005';
 // Default column widths in pixels (compact sizing so 100% fits on screen without horizontal scroll)
@@ -52,6 +53,7 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
   const [showRequiredQty, setShowRequiredQty] = useState<boolean>(false);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState<boolean>(false);
   const [isPrintViewOpen, setIsPrintViewOpen] = useState<boolean>(false);
+  const [isShipmentNotesOpen, setIsShipmentNotesOpen] = useState<boolean>(false);
   const [shipmentCount, setShipmentCount] = useState<number>(0);
 
   const [colWidths, setColWidths] = useState<Record<string, number>>(() => {
@@ -517,6 +519,17 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
   const yoffKinakoQty = getMiscItemQty(['요프 (콩가루)', '요프콩가루', '콩가루 요프', '요프 콩가루']);
   const yoff6Qty = getMiscItemQty(['요프 (6종)', '요프6종', '요프 6종']);
 
+  if (isShipmentNotesOpen) {
+    return (
+      <ShipmentNotesView
+        recordDate={recordDate}
+        initialShipmentCount={shipmentCount}
+        onShipmentCountChange={setShipmentCount}
+        onBack={() => setIsShipmentNotesOpen(false)}
+      />
+    );
+  }
+
   if (isPrintViewOpen) {
     return (
       <ProductionPrintView
@@ -549,7 +562,15 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+          <button
+            onClick={() => setIsShipmentNotesOpen(true)}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-sky-600 dark:text-sky-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-sky-400/40 shadow-sm"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-sky-500" />
+            <span>📦 발송 특이사항</span>
+          </button>
+
           <button
             onClick={() => setIsCatalogModalOpen(true)}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-300 dark:border-slate-700 shadow-sm"

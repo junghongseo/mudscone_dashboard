@@ -241,3 +241,169 @@ def parse_production_excel(file_contents: bytes, set_catalog_map: Dict[str, Any]
         "items": result,
         "set_breakdowns": set_breakdowns
     }
+
+
+def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
+    """
+    Parses an order shipment excel file to calculate:
+    - Per-order quantities of Greek Yogurt ('-----GREEK YOGURT') and YOF ('------YOF6팩')
+    - Frequency distributions for yogurt and YOF
+    - Combined shipments (합배송: identical tracking number with different order IDs), extracting 주문자명 and 주문자전화번호
+    - Jeju customer candidates
+    - Total order counts
+    """
+    workbook = openpyxl.load_workbook(filename=io.BytesIO(file_contents), data_only=True)
+    target_sheet = workbook.active
+
+    # Locate headers
+    header_row_idx = 1
+    order_id_col = None
+    tracking_col = None
+    buyer_name_col = None
+    buyer_phone_col = None
+    receiver_name_col = None
+    receiver_phone_col = None
+    product_col = None
+    option_col = None
+    qty_col = None
+    address_col = None
+
+    for r in range(1, min(10, target_sheet.max_row + 1)):
+        row_str = [str(target_sheet.cell(r, c).value or '').strip() for c in range(1, min(35, target_sheet.max_column + 1))]
+        for idx, val in enumerate(row_str):
+            col_num = idx + 1
+            clean_val = val.replace(' ', '')
+            
+            if clean_val in ['주문번호', '발주번호', '주문고유번호', '배송번호']:
+                order_id_col = col_num
+            elif clean_val in ['송장번호', '운송장번호', '운송장', '송장']:
+                tracking_col = col_num
+            elif clean_val in ['주문자명', '주문자', '구매자명', '구매자', '주문자이름', '주문고객']:
+                buyer_name_col = col_num
+            elif clean_val in ['주문자연락처', '주문자전화', '주문자전화번호', '구매자연락처', '구매자전화번호', '주문자휴대폰', '주문자핸드폰', '주문자이동전화']:
+                buyer_phone_col = col_num
+            elif clean_val in ['수취인명', '수령인', '받는분', '받는사람', '수하인', '수취인']:
+                receiver_name_col = col_num
+            elif clean_val in ['수취인연락처', '수취인전화번호', '수취인휴대폰', '수령인연락처', '수령인전화번호']:
+                receiver_phone_col = col_num
+            elif clean_val in ['상품명', '품목명', '공급처상품명']:
+                product_col = col_num
+            elif clean_val in ['옵션', '옵션명', '품목옵션', '옵션정보']:
+                option_col = col_num
+            elif clean_val in ['수량', '주문수량', '품목수량']:
+                qty_col = col_num
+            elif clean_val in ['주소', '수취인주소', '배송지', '배송지주소']:
+                address_col = col_num
+
+        if product_col and qty_col:
+            header_row_idx = r
+            break
+
+    if not product_col: product_col = 5
+    if not option_col: option_col = 6
+    if not qty_col: qty_col = 17
+
+    order_yogurt_map: Dict[str, int] = {}
+    order_yof_map: Dict[str, int] = {}
+    all_order_keys = set()
+    jeju_candidates = []
+    
+    # Map tracking_number -> { "orders": set(), "buyer_name": str, "buyer_phone": str }
+    tracking_groups: Dict[str, Dict[str, Any]] = {}
+
+    for r in range(header_row_idx + 1, target_sheet.max_row + 1):
+        raw_order_id = str(target_sheet.cell(r, order_id_col).value or '').strip() if order_id_col else None
+        raw_tracking = str(target_sheet.cell(r, tracking_col).value or '').strip() if tracking_col else None
+        raw_buyer_name = str(target_sheet.cell(r, buyer_name_col).value or '').strip() if buyer_name_col else ''
+        raw_buyer_phone = str(target_sheet.cell(r, buyer_phone_col).value or '').strip() if buyer_phone_col else ''
+        raw_receiver = str(target_sheet.cell(r, receiver_name_col).value or '').strip() if receiver_name_col else None
+        raw_receiver_phone = str(target_sheet.cell(r, receiver_phone_col).value or '').strip() if receiver_phone_col else ''
+        raw_product = str(target_sheet.cell(r, product_col).value or '').strip()
+        raw_option = str(target_sheet.cell(r, option_col).value or '').strip() if option_col else ''
+        raw_qty_val = target_sheet.cell(r, qty_col).value
+        raw_addr = str(target_sheet.cell(r, address_col).value or '').strip() if address_col else ''
+
+        if not raw_product and not raw_option:
+            continue
+
+        try:
+            qty = int(float(str(raw_qty_val).replace(',', '').strip()))
+        except:
+            qty = 1
+
+        order_key = raw_order_id or raw_receiver or f"order_{r}"
+        all_order_keys.add(order_key)
+
+        # Track combined shipments by tracking number
+        if raw_tracking and raw_tracking not in ['-', '', '0', 'None']:
+            if raw_tracking not in tracking_groups:
+                tracking_groups[raw_tracking] = {
+                    "orders": set(),
+                    "buyer_name": raw_buyer_name or raw_receiver or '',
+                    "buyer_phone": raw_buyer_phone or raw_receiver_phone or '',
+                }
+            if raw_buyer_name and not tracking_groups[raw_tracking]["buyer_name"]:
+                tracking_groups[raw_tracking]["buyer_name"] = raw_buyer_name
+            if raw_buyer_phone and not tracking_groups[raw_tracking]["buyer_phone"]:
+                tracking_groups[raw_tracking]["buyer_phone"] = raw_buyer_phone
+            
+            if raw_order_id:
+                tracking_groups[raw_tracking]["orders"].add(raw_order_id)
+            else:
+                tracking_groups[raw_tracking]["orders"].add(f"row_{r}")
+
+        full_prod_text = f"{raw_product} {raw_option}".upper()
+
+        # Check Greek Yogurt ('-----GREEK YOGURT' or 'GREEK YOGURT' or '그릭요거트')
+        is_yogurt = ('GREEK YOGURT' in full_prod_text or 'GREEKYOGURT' in full_prod_text or '그릭요거트' in full_prod_text or '그릭 요거트' in full_prod_text)
+        if is_yogurt:
+            order_yogurt_map[order_key] = order_yogurt_map.get(order_key, 0) + qty
+
+        # Check YOF ('------YOF6팩' or 'YOF6' or 'YOF-6' or '요프')
+        is_yof = ('YOF6' in full_prod_text or 'YOF-6' in full_prod_text or 'YOF 6' in full_prod_text or '요프6' in full_prod_text or '요프 6' in full_prod_text)
+        if is_yof:
+            order_yof_map[order_key] = order_yof_map.get(order_key, 0) + qty
+
+        # Check Jeju address
+        if raw_addr and ('제주' in raw_addr or '서귀포' in raw_addr):
+            if raw_receiver and raw_receiver not in jeju_candidates:
+                jeju_candidates.append(raw_receiver)
+
+    # Frequency distributions
+    greek_distribution = {i: 0 for i in range(1, 11)}
+    for order_key, total_qty in order_yogurt_map.items():
+        if 1 <= total_qty <= 10:
+            greek_distribution[total_qty] += 1
+        elif total_qty > 10:
+            greek_distribution[10] += 1
+
+    yof_distribution = {1: 0, 2: 0, 3: 0}
+    for order_key, total_qty in order_yof_map.items():
+        if 1 <= total_qty <= 3:
+            yof_distribution[total_qty] += 1
+        elif total_qty > 3:
+            yof_distribution[3] += 1
+
+    # Extract combined shipments (different order IDs with same tracking number)
+    combined_shipments = []
+    for tracking_num, info in tracking_groups.items():
+        if len(info["orders"]) > 1:
+            combined_shipments.append({
+                "tracking_number": tracking_num,
+                "buyer_name": info["buyer_name"] or '이름 없음',
+                "buyer_phone": info["buyer_phone"] or '-',
+                "order_count": len(info["orders"]),
+                "order_ids": list(info["orders"]),
+            })
+
+    # Sort combined shipments by buyer name
+    combined_shipments.sort(key=lambda x: x["buyer_name"])
+
+    return {
+        "status": "success",
+        "greek_yogurt": greek_distribution,
+        "yof": yof_distribution,
+        "combined_shipments": combined_shipments,
+        "total_orders": len(all_order_keys),
+        "jeju_candidates": jeju_candidates,
+    }

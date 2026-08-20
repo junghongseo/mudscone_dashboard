@@ -31,7 +31,7 @@ from excel_parsers import (
     try_parse_youtube_excel,
 )
 from report_exporter import export_report_excel
-from production_calculator import parse_production_excel
+from production_calculator import parse_production_excel, parse_shipment_notes_excel
 
 
 app = FastAPI(title="VAT Report Automation API")
@@ -507,6 +507,17 @@ async def api_parse_production_excel(file: UploadFile = File(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse production excel: {str(e)}")
+
+
+@app.post("/api/production/parse-shipment-excel")
+async def api_parse_shipment_excel(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        res = parse_shipment_notes_excel(contents)
+        return res
+    except Exception as e:
+        print("Error parsing shipment excel:", e)
+        raise HTTPException(status_code=500, detail=f"Failed to parse shipment excel: {str(e)}")
 
 
 @app.get("/api/production/catalog")

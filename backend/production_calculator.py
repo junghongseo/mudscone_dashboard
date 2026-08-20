@@ -268,40 +268,73 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
     qty_col = None
     address_col = None
 
-    for r in range(1, min(10, target_sheet.max_row + 1)):
-        row_str = [str(target_sheet.cell(r, c).value or '').strip() for c in range(1, min(35, target_sheet.max_column + 1))]
-        for idx, val in enumerate(row_str):
-            col_num = idx + 1
-            clean_val = val.replace(' ', '')
-            
-            if clean_val in ['주문번호', '발주번호', '주문고유번호', '배송번호']:
-                order_id_col = col_num
-            elif clean_val in ['송장번호', '운송장번호', '운송장', '송장']:
-                tracking_col = col_num
-            elif clean_val in ['주문자명', '주문자', '구매자명', '구매자', '주문자이름', '주문고객']:
-                buyer_name_col = col_num
-            elif clean_val in ['주문자연락처', '주문자전화', '주문자전화번호', '구매자연락처', '구매자전화번호', '주문자휴대폰', '주문자핸드폰', '주문자이동전화']:
-                buyer_phone_col = col_num
-            elif clean_val in ['수취인명', '수령인', '받는분', '받는사람', '수하인', '수취인']:
-                receiver_name_col = col_num
-            elif clean_val in ['수취인연락처', '수취인전화번호', '수취인휴대폰', '수령인연락처', '수령인전화번호']:
-                receiver_phone_col = col_num
-            elif clean_val in ['상품명', '품목명', '공급처상품명']:
-                product_col = col_num
-            elif clean_val in ['옵션', '옵션명', '품목옵션', '옵션정보']:
-                option_col = col_num
-            elif clean_val in ['수량', '주문수량', '품목수량']:
-                qty_col = col_num
-            elif clean_val in ['주소', '수취인주소', '배송지', '배송지주소']:
-                address_col = col_num
+    max_cols = max(target_sheet.max_column, 50)
 
-        if product_col and qty_col:
+    for r in range(1, min(10, target_sheet.max_row + 1)):
+        row_cells = [str(target_sheet.cell(r, c).value or '').strip() for c in range(1, max_cols + 1)]
+        
+        found_product = False
+        found_qty = False
+
+        for idx, val in enumerate(row_cells):
+            col_num = idx + 1
+            if not val:
+                continue
+            clean_val = val.replace(' ', '').replace('\n', '').replace('\r', '').lower()
+
+            # 1. Tracking column
+            if any(k in clean_val for k in ['송장번호', '운송장번호', '송장no', '운송장no', '택배송장']) or clean_val in ['송장', '운송장']:
+                if not tracking_col: tracking_col = col_num
+
+            # 2. Order ID column
+            elif any(k in clean_val for k in ['주문번호', '발주번호', '주문고유번호', '배송번호', '쇼핑몰주문번호', '원주문번호']):
+                if not order_id_col: order_id_col = col_num
+
+            # 3. Buyer Phone column (주문자 전화번호 / 연락처)
+            elif any(b in clean_val for b in ['주문자', '구매자', '주문고객', '보내는', '송하인']) and any(p in clean_val for p in ['전화', '연락처', '휴대폰', '핸드폰', '이동전화', 'tel', 'phone', 'hp']):
+                if not buyer_phone_col: buyer_phone_col = col_num
+
+            # 4. Buyer Name column (주문자명 / 구매자명)
+            elif any(b in clean_val for b in ['주문자명', '구매자명', '주문자이름', '구매자이름', '주문고객명', '주문자인', '보내는사람', '보내는분', '송하인명', '송하인']) or clean_val in ['주문자', '구매자', '주문고객']:
+                if not any(ex in clean_val for ex in ['전화', '연락처', '휴대폰', '핸드폰', '주소', '우편', '이메일', 'id', '아이디', '수취', '수령', '받는']):
+                    if not buyer_name_col: buyer_name_col = col_num
+
+            # 5. Receiver Phone column (수취인 전화번호 / 연락처)
+            elif any(r_kw in clean_val for r in ['수취인', '수령인', '받는사람', '받는분', '수하인'] for r_kw in [r]) and any(p in clean_val for p in ['전화', '연락처', '휴대폰', '핸드폰', '이동전화', 'tel', 'phone', 'hp']):
+                if not receiver_phone_col: receiver_phone_col = col_num
+
+            # 6. Receiver Name column (수취인명 / 수령인)
+            elif any(r_kw in clean_val for r in ['수취인명', '수령인명', '받는분', '받는사람', '수하인명'] for r_kw in [r]) or clean_val in ['수취인', '수령인', '수하인']:
+                if not any(ex in clean_val for ex in ['전화', '연락처', '휴대폰', '핸드폰', '주소', '우편']):
+                    if not receiver_name_col: receiver_name_col = col_num
+
+            # 7. Product column
+            elif any(p in clean_val for p in ['상품명', '품목명', '공급처상품명']):
+                if not product_col: product_col = col_num
+                found_product = True
+
+            # 8. Option column
+            elif any(o in clean_val for o in ['옵션', '옵션명', '품목옵션', '옵션정보', '공급처옵션명']):
+                if not option_col: option_col = col_num
+
+            # 9. Qty column
+            elif any(q in clean_val for q in ['수량', '주문수량', '품목수량']):
+                if not qty_col: qty_col = col_num
+                found_qty = True
+
+            # 10. Address column
+            elif any(a in clean_val for a in ['주소', '수취인주소', '배송지', '배송지주소']):
+                if not address_col: address_col = col_num
+
+        if found_product and found_qty:
             header_row_idx = r
             break
 
     if not product_col: product_col = 5
     if not option_col: option_col = 6
     if not qty_col: qty_col = 17
+
+    print(f"[ShipmentParser] Headers: header_row={header_row_idx}, tracking={tracking_col}, order_id={order_id_col}, buyer_name={buyer_name_col}, buyer_phone={buyer_phone_col}, receiver_name={receiver_name_col}, receiver_phone={receiver_phone_col}, prod={product_col}, qty={qty_col}")
 
     order_yogurt_map: Dict[str, int] = {}
     order_yof_map: Dict[str, int] = {}
@@ -323,7 +356,7 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
         raw_qty_val = target_sheet.cell(r, qty_col).value
         raw_addr = str(target_sheet.cell(r, address_col).value or '').strip() if address_col else ''
 
-        if not raw_product and not raw_option:
+        if not raw_product and not raw_option and not raw_tracking:
             continue
 
         try:
@@ -335,22 +368,28 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
         all_order_keys.add(order_key)
 
         # Track combined shipments by tracking number
-        if raw_tracking and raw_tracking not in ['-', '', '0', 'None']:
+        if raw_tracking and raw_tracking not in ['-', '', '0', 'None', 'nan']:
             if raw_tracking not in tracking_groups:
                 tracking_groups[raw_tracking] = {
                     "orders": set(),
-                    "buyer_name": raw_buyer_name or raw_receiver or '',
-                    "buyer_phone": raw_buyer_phone or raw_receiver_phone or '',
+                    "buyer_name": '',
+                    "buyer_phone": '',
                 }
-            if raw_buyer_name and not tracking_groups[raw_tracking]["buyer_name"]:
-                tracking_groups[raw_tracking]["buyer_name"] = raw_buyer_name
-            if raw_buyer_phone and not tracking_groups[raw_tracking]["buyer_phone"]:
-                tracking_groups[raw_tracking]["buyer_phone"] = raw_buyer_phone
+
+            # Prioritize buyer_name, fallback to receiver name if buyer name missing
+            best_name = raw_buyer_name or raw_receiver or ''
+            best_phone = raw_buyer_phone or raw_receiver_phone or ''
+
+            if best_name and (not tracking_groups[raw_tracking]["buyer_name"] or tracking_groups[raw_tracking]["buyer_name"] in ['이름 없음', '-']):
+                tracking_groups[raw_tracking]["buyer_name"] = best_name
+            if best_phone and (not tracking_groups[raw_tracking]["buyer_phone"] or tracking_groups[raw_tracking]["buyer_phone"] in ['-', '']):
+                tracking_groups[raw_tracking]["buyer_phone"] = best_phone
             
             if raw_order_id:
                 tracking_groups[raw_tracking]["orders"].add(raw_order_id)
             else:
                 tracking_groups[raw_tracking]["orders"].add(f"row_{r}")
+
 
         full_prod_text = f"{raw_product} {raw_option}".upper()
 

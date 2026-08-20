@@ -38,6 +38,59 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
   const FIXED_FONT_SIZE = 13.5; // Fixed font size for all print pages
 
   const STORAGE_KEY = 'mudscone_print_row_heights';
+  const ZEBRA_STORAGE_KEY = 'mudscone_print_zebra_style';
+
+  const ZEBRA_PRESETS = [
+    { label: '선명 블루', color: '#2563eb', opacity: 20 },
+    { label: '청량 스카이', color: '#0284c7', opacity: 18 },
+    { label: '쿨 그레이', color: '#475569', opacity: 16 },
+    { label: '라벤더', color: '#7c3aed', opacity: 16 },
+  ];
+
+  const computeZebraRgb = (hex: string, alphaPercent: number): string => {
+    try {
+      let c = hex.replace('#', '');
+      if (c.length === 3) c = c.split('').map((x) => x + x).join('');
+      const num = parseInt(c, 16);
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      const a = Math.min(Math.max(alphaPercent, 5), 70) / 100;
+      const blendedR = Math.round(r * a + 255 * (1 - a));
+      const blendedG = Math.round(g * a + 255 * (1 - a));
+      const blendedB = Math.round(b * a + 255 * (1 - a));
+      return `rgb(${blendedR}, ${blendedG}, ${blendedB})`;
+    } catch (e) {
+      return 'rgb(219, 234, 254)';
+    }
+  };
+
+  const [zebraConfig, setZebraConfig] = React.useState<{ baseColor: string; opacity: number }>(() => {
+    try {
+      const saved = localStorage.getItem(ZEBRA_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.baseColor && typeof parsed.opacity === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load saved zebra style', e);
+    }
+    return { baseColor: '#2563eb', opacity: 20 };
+  });
+
+  const handleZebraChange = (baseColor: string, opacity: number) => {
+    const updated = { baseColor, opacity };
+    setZebraConfig(updated);
+    try {
+      localStorage.setItem(ZEBRA_STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save zebra style', e);
+    }
+  };
+
+  const activeZebraRgb = computeZebraRgb(zebraConfig.baseColor, zebraConfig.opacity);
 
   const [activeTab, setActiveTab] = React.useState<'p1' | 'p2' | 'p3'>('p1');
   const [pageStyles, setPageStyles] = React.useState<Record<'p1' | 'p2' | 'p3', { rowHeight: number }>>(() => {
@@ -216,9 +269,9 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
           .page-break-before { page-break-before: always !important; break-before: page !important; margin-top: 0 !important; }
           .no-print { display: none !important; }
           .print-table-p1, .print-table-p2, .print-table-p3 { font-size: ${FIXED_FONT_SIZE}px !important; }
-          .print-table-p1 tr { height: ${pageStyles.p1.rowHeight}px !important; }
-          .print-table-p2 tr { height: ${pageStyles.p2.rowHeight}px !important; }
-          .print-table-p3 tr { height: ${pageStyles.p3.rowHeight}px !important; }
+          .print-table-p1 tr { height: ${pageStyles.p1.rowHeight}px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .print-table-p2 tr { height: ${pageStyles.p2.rowHeight}px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .print-table-p3 tr { height: ${pageStyles.p3.rowHeight}px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .print-table-p1 th, .print-table-p1 td,
           .print-table-p2 th, .print-table-p2 td,
           .print-table-p3 th, .print-table-p3 td {
@@ -242,24 +295,24 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
         </button>
 
         {/* Quick Jump Buttons & Target Selection */}
-        <div className="flex items-center gap-4 text-xs font-bold bg-slate-900/80 px-3.5 py-1.5 rounded-lg border border-slate-700">
+        <div className="flex items-center gap-3 text-xs font-bold bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700">
           <div className="flex items-center gap-1.5">
             <span className="text-slate-400">페이지 이동:</span>
             <button
               onClick={() => scrollToPage('p1')}
-              className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 text-[11px] font-extrabold transition flex items-center gap-1"
+              className="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 text-[11px] font-extrabold transition flex items-center gap-1"
             >
               📄 1P 요약표
             </button>
             <button
               onClick={() => scrollToPage('p2')}
-              className="px-2.5 py-1 rounded bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-white text-[11px] font-extrabold transition flex items-center gap-1"
+              className="px-2 py-1 rounded bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-white text-[11px] font-extrabold transition flex items-center gap-1"
             >
               🔥 2P 오븐표
             </button>
             <button
               onClick={() => scrollToPage('p3')}
-              className="px-2.5 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 text-[11px] font-extrabold transition flex items-center gap-1"
+              className="px-2 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 text-[11px] font-extrabold transition flex items-center gap-1"
             >
               📋 3P 디스트리뷰터
             </button>
@@ -267,7 +320,7 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
 
           <div className="h-4 w-px bg-slate-700"></div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <span className="text-slate-400">인쇄 대상:</span>
             <label className="flex items-center gap-1 cursor-pointer text-amber-300 hover:text-amber-200">
               <input
@@ -297,6 +350,63 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
               3P
             </label>
           </div>
+        </div>
+
+        {/* Zebra Row Striping Color & Opacity Control */}
+        <div className="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
+          <span className="text-slate-300 font-bold text-xs flex items-center gap-1">
+            🎨 줄무늬 색감:
+          </span>
+          <input
+            type="color"
+            value={zebraConfig.baseColor}
+            onChange={(e) => handleZebraChange(e.target.value, zebraConfig.opacity)}
+            className="w-5 h-5 rounded cursor-pointer border border-slate-600 bg-transparent p-0"
+            title="색상 선택기"
+          />
+          <div className="flex items-center gap-1">
+            <span className="text-slate-400 text-[11px]">진하기:</span>
+            <input
+              type="range"
+              min="5"
+              max="60"
+              step="1"
+              value={zebraConfig.opacity}
+              onChange={(e) => handleZebraChange(zebraConfig.baseColor, parseInt(e.target.value, 10))}
+              className="w-16 accent-blue-500 cursor-pointer"
+              title="진하기 조절"
+            />
+            <span className="font-mono text-blue-300 font-black text-[11px] min-w-[26px]">{zebraConfig.opacity}%</span>
+          </div>
+
+          <div className="h-4 w-px bg-slate-700 mx-0.5"></div>
+
+          {/* Quick Presets */}
+          <div className="flex items-center gap-1">
+            {ZEBRA_PRESETS.map((p) => {
+              const isSelected = zebraConfig.baseColor === p.color && Math.abs(zebraConfig.opacity - p.opacity) <= 2;
+              return (
+                <button
+                  key={p.label}
+                  onClick={() => handleZebraChange(p.color, p.opacity)}
+                  className={`px-1.5 py-0.5 rounded text-[10.5px] font-bold border transition ${
+                    isSelected
+                      ? 'bg-blue-600/30 text-blue-300 border-blue-400 shadow-sm'
+                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-700'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Live Sample Swatch */}
+          <div
+            className="w-4 h-4 rounded border border-slate-400 shadow-inner ml-0.5"
+            style={{ backgroundColor: activeZebraRgb }}
+            title="현재 인쇄 줄무늬 색상 미리보기"
+          />
         </div>
 
         <button
@@ -504,14 +614,14 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                     }
                     const isZebra = nonSepIdx % 2 === 0;
                     nonSepIdx++;
-                    const zebraBgClass = isZebra ? 'bg-[#eef2f7] print:bg-[#eef2f7]' : 'bg-white print:bg-white';
+                    const rowBg = isZebra ? activeZebraRgb : '#ffffff';
 
                     if (uRow.type === 'scone') {
                       const row = uRow.row;
                       const secOven = row.matchedHp?.oven_number || row.matchedStick?.oven_number;
                       const isBar = row.sconeItem.category === '바';
                       return (
-                        <tr key={`scone-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
+                        <tr key={`scone-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px`, backgroundColor: rowBg }} className="hover:bg-gray-100/50 border-b border-gray-300">
                           <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{row.sconeItem.oven_number || '1'}</td>
                           <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{secOven || '-'}</td>
                           <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
@@ -551,7 +661,7 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                     } else {
                       const row = uRow.row;
                       return (
-                        <tr key={`shake-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
+                        <tr key={`shake-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px`, backgroundColor: rowBg }} className="hover:bg-gray-100/50 border-b border-gray-300">
                           <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
                           <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
                           <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
@@ -714,10 +824,10 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                       }
                       const isZebra = nonSepIdx % 2 === 0;
                       nonSepIdx++;
-                      const zebraBgClass = isZebra ? 'bg-[#eef2f7] print:bg-[#eef2f7]' : 'bg-white print:bg-white';
+                      const rowBg = isZebra ? activeZebraRgb : '#ffffff';
 
                       return (
-                        <tr key={`ob-print-${obRow.product_name}-${obIdx}`} style={{ height: `${pageStyles.p2.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
+                        <tr key={`ob-print-${obRow.product_name}-${obIdx}`} style={{ height: `${pageStyles.p2.rowHeight}px`, backgroundColor: rowBg }} className="hover:bg-gray-100/50 border-b border-gray-300">
                           <td className="border border-gray-300 py-0.5 px-1 text-left font-bold text-gray-900">
                             {obRow.product_name}
                           </td>
@@ -864,7 +974,7 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                       }
                       const isZebra = nonSepIdx % 2 === 0;
                       nonSepIdx++;
-                      const zebraBgClass = isZebra ? 'bg-[#eef2f7] print:bg-[#eef2f7]' : 'bg-white print:bg-white';
+                      const rowBg = isZebra ? activeZebraRgb : '#ffffff';
 
                       if (uRow.type === 'scone') {
                         const row = uRow.row;
@@ -879,7 +989,7 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                         const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, dough.onePanels - frozenOne);
 
                         return (
-                          <tr key={`scone-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
+                          <tr key={`scone-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px`, backgroundColor: rowBg }} className="hover:bg-gray-100/50 border-b border-gray-300">
                             <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{row.sconeItem.oven_number || '1'}</td>
                             <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{secOven || '-'}</td>
                             <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
@@ -925,7 +1035,7 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                         const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, dough.onePanels - frozenOne);
 
                         return (
-                          <tr key={`shake-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
+                          <tr key={`shake-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px`, backgroundColor: rowBg }} className="hover:bg-gray-100/50 border-b border-gray-300">
                             <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
                             <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
                             <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">

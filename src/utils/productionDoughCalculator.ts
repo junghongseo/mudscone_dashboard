@@ -2,6 +2,28 @@ import { ProductionItem } from '../types/production';
 
 export const roundHalf = (num: number): number => Math.round(num * 10) / 10;
 
+/**
+ * Calculates dough portioning:
+ * - fourPanels: Number of 4-panel dough batches (총 판수 / 4)
+ * - onePanels: Remainder panels (총 판수 % 4)
+ * - Special Rule: If remainder is 1 and fourPanels >= 1, borrow 1 batch so fourPanels -= 1 and onePanels = 5.
+ */
+export const calculateDoughPortions = (totalPanels: number): { fourPanels: number; onePanels: number } => {
+  if (!totalPanels || totalPanels <= 0) {
+    return { fourPanels: 0, onePanels: 0 };
+  }
+  const intPanels = Math.round(totalPanels);
+  let fourPanels = Math.floor(intPanels / 4);
+  let onePanels = intPanels % 4;
+
+  if (onePanels === 1 && fourPanels >= 1) {
+    fourPanels -= 1;
+    onePanels = 5;
+  }
+
+  return { fourPanels, onePanels };
+};
+
 export const recalculateItem = (item: ProductionItem): ProductionItem => {
   const requiredQty = item.order_qty + item.extra_qty;
   const prodQty = Math.max(0, requiredQty - item.carryover_qty);

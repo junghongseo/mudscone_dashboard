@@ -1,14 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { ProductionItem, SetBreakdownSummary, ProductCatalogItem, SetCatalogItem } from '../../types/production';
-import { Upload, FileSpreadsheet, Eye, EyeOff, Save, RefreshCw, Printer, AlertTriangle, Package, Sparkles, Gift, Layers, PlusCircle } from 'lucide-react';
+import { Upload, FileSpreadsheet, Eye, EyeOff, Save, RefreshCw, Printer, AlertTriangle, Package, Sparkles, Gift, Layers, PlusCircle, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { ProductCatalogModal } from './ProductCatalogModal';
-import { recalculateItem, calculateCombinedSconeRows, roundHalf } from '../../utils/productionDoughCalculator';
+import { recalculateItem, calculateCombinedSconeRows, calculateDoughPortions, roundHalf } from '../../utils/productionDoughCalculator';
 import { ProductionTableRow } from './ProductionTableRow';
 import { ProductionMiniShakeRow } from './ProductionMiniShakeRow';
 import { ProductionPrintView } from './ProductionPrintView';
 
 const API_BASE = import.meta.env.VITE_VAT_API_BASE?.replace(/\/api$/, '') || 'http://127.0.0.1:8005';
+// Default column widths in pixels (compact sizing so 100% fits on screen without horizontal scroll)
+const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
+  drag: 28,
+  oven_base: 44,
+  oven_sec: 44,
+  name: 130,
+  finalPanels: 70,
+  orderQty: 54,
+  extraQty: 54,
+  reqQty: 54,
+  carryover: 54,
+  prodQty: 58,
+  sconePanels: 64,
+  bumperPanels: 66,
+  sconeExcess: 68,
+  hpOrder: 64,
+  hpPanels: 58,
+  shakeExcess: 68,
+  stickPanels: 58,
+  stickExcess: 66,
+};
+
+const DEFAULT_ROW_HEIGHT = 38;
+const DEFAULT_FONT_SIZE = 11;
+const COL_WIDTHS_STORAGE_KEY = 'mudscone_prod_col_widths_v1';
+const ROW_HEIGHT_STORAGE_KEY = 'mudscone_prod_row_height_v1';
+const FONT_SIZE_STORAGE_KEY = 'mudscone_prod_font_size_v1';
 
 interface ProductionCalculatorProps {
   onTriggerPrint?: (items: ProductionItem[], recordDate: string) => void;
@@ -26,6 +53,154 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState<boolean>(false);
   const [isPrintViewOpen, setIsPrintViewOpen] = useState<boolean>(false);
   const [shipmentCount, setShipmentCount] = useState<number>(0);
+
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem(COL_WIDTHS_STORAGE_KEY);
+      if (saved) {
+        return { ...DEFAULT_COLUMN_WIDTHS, ...JSON.parse(saved) };
+      }
+    } catch {
+      // fallback
+    }
+    return DEFAULT_COLUMN_WIDTHS;
+  });
+
+  const [rowHeight, setRowHeight] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(ROW_HEIGHT_STORAGE_KEY);
+      if (saved) {
+        return parseInt(saved, 10);
+      }
+    } catch {
+      // fallback
+    }
+    return DEFAULT_ROW_HEIGHT;
+  });
+
+  const [fontSize, setFontSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
+      if (saved) {
+        return parseInt(saved, 10);
+      }
+    } catch {
+      // fallback
+    }
+    return DEFAULT_FONT_SIZE;
+  });
+
+  const [fieldOverrides, setFieldOverrides] = useState<Record<string, { four?: number; one?: number; frozenFour?: number; frozenOne?: number }>>({});
+
+  const handleFieldOverrideChange = (key: string, field: 'four' | 'one' | 'frozenFour' | 'frozenOne', val: number) => {
+    setFieldOverrides(prev => {
+      const existing = prev[key] || {};
+      if (field === 'frozenFour') {
+        const { four, ...rest } = existing;
+        return {
+          ...prev,
+          [key]: { ...rest, frozenFour: val }
+        };
+      }
+      if (field === 'frozenOne') {
+        const { one, ...rest } = existing;
+        return {
+          ...prev,
+          [key]: { ...rest, frozenOne: val }
+        };
+      }
+      return {
+        ...prev,
+        [key]: {
+          ...existing,
+          [field]: val
+        }
+      };
+    });
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COL_WIDTHS_STORAGE_KEY, JSON.stringify(colWidths));
+    } catch (e) {
+      console.error('Failed to save colWidths to localStorage', e);
+    }
+  }, [colWidths]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ROW_HEIGHT_STORAGE_KEY, rowHeight.toString());
+    } catch (e) {
+      console.error('Failed to save rowHeight to localStorage', e);
+    }
+  }, [rowHeight]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FONT_SIZE_STORAGE_KEY, fontSize.toString());
+    } catch (e) {
+      console.error('Failed to save fontSize to localStorage', e);
+    }
+  }, [fontSize]);
+
+  const handleResetTableSizes = () => {
+    setColWidths(DEFAULT_COLUMN_WIDTHS);
+    setRowHeight(DEFAULT_ROW_HEIGHT);
+    setFontSize(DEFAULT_FONT_SIZE);
+    localStorage.removeItem(COL_WIDTHS_STORAGE_KEY);
+    localStorage.removeItem(ROW_HEIGHT_STORAGE_KEY);
+    localStorage.removeItem(FONT_SIZE_STORAGE_KEY);
+  };
+
+  const handleColResizeMouseDown = (e: React.MouseEvent, colKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = colWidths[colKey] || DEFAULT_COLUMN_WIDTHS[colKey] || 80;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const newWidth = Math.max(30, startWidth + delta);
+      setColWidths((prev) => ({ ...prev, [colKey]: newWidth }));
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleRowResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startY = e.clientY;
+    const startH = rowHeight;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientY - startY;
+      const newH = Math.max(32, Math.min(120, startH + delta));
+      setRowHeight(newH);
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
 
   const [currentFile, setCurrentFile] = useState<File | null>(null);
   const [setBreakdowns, setSetBreakdowns] = useState<SetBreakdownSummary[]>([]);
@@ -349,6 +524,9 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
         recordDate={recordDate}
         showRequiredQty={showRequiredQty}
         shipmentCount={shipmentCount}
+        fieldOverrides={fieldOverrides}
+        fontSize={fontSize}
+        rowHeight={rowHeight}
         onBack={() => setIsPrintViewOpen(false)}
       />
     );
@@ -631,7 +809,44 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                 </span>
                 <span className="text-xs text-slate-400">({items.length}개 항목)</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800/80 rounded-lg text-xs border border-slate-700 text-slate-300">
+                  <span className="text-[11px] text-slate-400">글자 크기:</span>
+                  <input
+                    type="range"
+                    min="9"
+                    max="15"
+                    value={fontSize}
+                    onChange={(e) => setFontSize(parseInt(e.target.value, 10))}
+                    className="w-14 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                    title="글자 크기 조절 슬라이더 (9px~15px)"
+                  />
+                  <span className="font-mono text-amber-400 font-bold text-[11px] w-6 text-right">{fontSize}px</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800/80 rounded-lg text-xs border border-slate-700 text-slate-300">
+                  <span className="text-[11px] text-slate-400">행 높이:</span>
+                  <input
+                    type="range"
+                    min="28"
+                    max="60"
+                    value={rowHeight}
+                    onChange={(e) => setRowHeight(parseInt(e.target.value, 10))}
+                    className="w-14 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                    title="행 높이 조절 슬라이더 (28px~60px)"
+                  />
+                  <span className="font-mono text-amber-400 font-bold text-[11px] w-6 text-right">{rowHeight}px</span>
+                </div>
+
+                <button
+                  onClick={handleResetTableSizes}
+                  className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1 border border-slate-700 shadow-sm"
+                  title="열 너비, 행 높이, 글자 크기를 기본값으로 초기화합니다."
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                  <span>크기 초기화</span>
+                </button>
+
                 <button
                   onClick={handleAddSeparatorRow}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-sky-500/30 shadow-sm"
@@ -642,59 +857,258 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left border-collapse min-w-[1200px]">
+              <table
+                style={{ fontSize: `${fontSize}px` }}
+                className="w-full text-left border-collapse"
+              >
                 <thead>
-                  <tr className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-200 text-xs font-bold border-b border-slate-300 dark:border-slate-800 text-center">
-                    <th rowSpan={2} className="py-3 px-2 w-8 min-w-[32px] text-center text-slate-400 font-normal whitespace-nowrap print:hidden"></th>
-                    <th colSpan={2} className="py-2 px-3 border-r border-slate-300 dark:border-slate-800 bg-slate-200/50 dark:bg-slate-900 text-amber-500 dark:text-amber-400 font-black whitespace-nowrap text-center">
+                  <tr className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-200 text-xs font-bold border-b border-slate-300 dark:border-slate-800 text-center select-none">
+                    <th
+                      rowSpan={2}
+                      style={{ width: colWidths.drag, minWidth: colWidths.drag }}
+                      className="relative py-2 px-1 text-center text-slate-400 font-normal whitespace-nowrap print:hidden"
+                    >
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'drag')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
+                    <th
+                      colSpan={2}
+                      className="py-1.5 px-2 border-r border-slate-300 dark:border-slate-800 bg-slate-200/50 dark:bg-slate-900 text-amber-500 dark:text-amber-400 font-black whitespace-nowrap text-center"
+                    >
                       오븐 번호
                     </th>
-                    <th rowSpan={2} className="py-3.5 px-3.5 text-left whitespace-nowrap min-w-[160px]">제품명</th>
-
-                    {/* Integrated Total Required Panels (Moved right next to Product Name) */}
-                    <th rowSpan={2} className="py-3.5 px-3 text-right bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black text-sm whitespace-nowrap min-w-[100px]">
-                      통합 최종 필요 판수
+                    <th
+                      rowSpan={2}
+                      style={{ width: colWidths.name, minWidth: colWidths.name }}
+                      className="relative py-2 px-2 text-left whitespace-nowrap group select-none"
+                    >
+                      제품명
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'name')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
                     </th>
 
-                    <th rowSpan={2} className="py-3.5 px-3 text-right whitespace-nowrap min-w-[70px]">주문량</th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-right whitespace-nowrap min-w-[75px]">추가량</th>
+                    {/* Total Required Panels (총 판수) */}
+                    <th
+                      rowSpan={2}
+                      style={{ width: colWidths.finalPanels, minWidth: colWidths.finalPanels }}
+                      className="relative py-2 px-2 text-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black whitespace-nowrap group select-none"
+                    >
+                      총 판수
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'finalPanels')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
+
+                    {/* Category Group 1: 삼각&바스콘 */}
+                    <th
+                      colSpan={showRequiredQty ? 8 : 7}
+                      className="py-1.5 px-2 bg-amber-500/15 text-amber-700 dark:text-amber-400 font-black border-r border-slate-300 dark:border-slate-800 whitespace-nowrap text-center"
+                    >
+                      삼각&바스콘
+                    </th>
+
+                    {/* Category Group 2: 하프팩&미니쉐이크 */}
+                    <th
+                      colSpan={3}
+                      className="py-1.5 px-2 bg-purple-500/15 text-purple-700 dark:text-purple-300 font-black border-r border-slate-300 dark:border-slate-800 whitespace-nowrap text-center"
+                    >
+                      하프팩&미니쉐이크
+                    </th>
+
+                    {/* Category Group 3: 스틱스콘 */}
+                    <th
+                      colSpan={2}
+                      className="py-1.5 px-2 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-black border-r border-slate-300 dark:border-slate-800 whitespace-nowrap text-center"
+                    >
+                      스틱스콘
+                    </th>
+                  </tr>
+                  <tr className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-200 font-extrabold border-b border-slate-300 dark:border-slate-800 text-center select-none">
+                    {/* Sub-headers for 오븐 */}
+                    <th
+                      style={{ width: colWidths.oven_base, minWidth: colWidths.oven_base }}
+                      className="relative py-1 px-1.5 text-center text-amber-500 dark:text-amber-400 border-r border-slate-300 dark:border-slate-800 whitespace-nowrap group"
+                    >
+                      삼각 / 바
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'oven_base')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
+                    <th
+                      style={{ width: colWidths.oven_sec, minWidth: colWidths.oven_sec }}
+                      className="relative py-1 px-1.5 text-center text-purple-400 dark:text-purple-300 border-r border-slate-300 dark:border-slate-800 whitespace-nowrap group"
+                    >
+                      스틱 / 큐브
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'oven_sec')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
+
+                    {/* Sub-headers for 삼각&바스콘 */}
+                    <th
+                      style={{ width: colWidths.orderQty, minWidth: colWidths.orderQty }}
+                      className="relative py-1 px-1.5 text-center whitespace-nowrap group select-none"
+                    >
+                      주문량
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'orderQty')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
+                    <th
+                      style={{ width: colWidths.extraQty, minWidth: colWidths.extraQty }}
+                      className="relative py-1 px-1.5 text-center whitespace-nowrap group select-none"
+                    >
+                      추가량
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'extraQty')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
                     {showRequiredQty && (
-                      <th rowSpan={2} className="py-3.5 px-3 text-right text-amber-600 dark:text-amber-300 whitespace-nowrap min-w-[75px]">
+                      <th
+                        style={{ width: colWidths.reqQty, minWidth: colWidths.reqQty }}
+                        className="relative py-1 px-1.5 text-center text-amber-600 dark:text-amber-300 whitespace-nowrap group select-none"
+                      >
                         필요량
+                        <div
+                          onMouseDown={(e) => handleColResizeMouseDown(e, 'reqQty')}
+                          className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                          title="드래그하여 열 너비 조절"
+                        />
                       </th>
                     )}
-                    <th rowSpan={2} className="py-3.5 px-3 text-right whitespace-nowrap min-w-[75px]">이월재고</th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-right text-amber-600 dark:text-amber-400 whitespace-nowrap min-w-[85px]">필요생산량</th>
-                    
-                    <th rowSpan={2} className="py-3.5 px-3 text-right bg-amber-500/10 text-amber-600 dark:text-amber-400 font-black whitespace-nowrap min-w-[95px]">
-                      삼각&바 필요 판수
+                    <th
+                      style={{ width: colWidths.carryover, minWidth: colWidths.carryover }}
+                      className="relative py-1 px-1.5 text-center whitespace-nowrap group select-none"
+                    >
+                      이월재고
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'carryover')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
                     </th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-right text-slate-700 dark:text-slate-300 font-bold whitespace-nowrap min-w-[90px]">
-                      삼각&바 판수 추가
+                    <th
+                      style={{ width: colWidths.prodQty, minWidth: colWidths.prodQty }}
+                      className="relative py-1 px-1.5 text-center text-amber-600 dark:text-amber-400 whitespace-nowrap group select-none"
+                    >
+                      생산량
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'prodQty')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
                     </th>
-                    
-                    <th rowSpan={2} className="py-3.5 px-3 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-right border-l border-purple-500/20 whitespace-nowrap min-w-[130px]">
-                      하프팩&쉐이크 주문량(봉)
+                    <th
+                      style={{ width: colWidths.sconePanels, minWidth: colWidths.sconePanels }}
+                      className="relative py-1 px-1.5 text-center bg-amber-500/10 text-amber-600 dark:text-amber-400 font-black whitespace-nowrap group select-none"
+                    >
+                      판수
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'sconePanels')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
                     </th>
-                    
-                    <th rowSpan={2} className="py-3.5 px-3 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-right font-black border-r border-purple-500/20 whitespace-nowrap min-w-[110px]">
-                      하프팩&쉐이크 판수
+                    <th
+                      style={{ width: colWidths.bumperPanels, minWidth: colWidths.bumperPanels }}
+                      className="relative py-1 px-1.5 text-center text-slate-700 dark:text-slate-300 font-bold whitespace-nowrap group select-none"
+                    >
+                      판수 추가
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'bumperPanels')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
+                    {/* Category 1 Excess: 남는량(개) */}
+                    <th
+                      style={{ width: colWidths.sconeExcess, minWidth: colWidths.sconeExcess }}
+                      className="relative py-1 px-1.5 text-center text-slate-700 dark:text-slate-300 font-bold whitespace-nowrap group select-none border-r border-slate-300 dark:border-slate-800"
+                    >
+                      남는량(개)
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'sconeExcess')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
                     </th>
 
-                    <th rowSpan={2} className="py-3.5 px-3 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-right font-black border-l border-r border-indigo-500/20 whitespace-nowrap min-w-[85px]">
-                      스틱 판수
+                    {/* Sub-headers for 하프팩&미니쉐이크 */}
+                    <th
+                      style={{ width: colWidths.hpOrder, minWidth: colWidths.hpOrder }}
+                      className="relative py-1 px-1.5 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-center whitespace-nowrap group select-none"
+                    >
+                      주문량(봉)
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'hpOrder')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
+                    <th
+                      style={{ width: colWidths.hpPanels, minWidth: colWidths.hpPanels }}
+                      className="relative py-1 px-1.5 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-center font-black whitespace-nowrap group select-none"
+                    >
+                      판수
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'hpPanels')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
+                    {/* Category 2 Excess: 남는량(봉) */}
+                    <th
+                      style={{ width: colWidths.shakeExcess, minWidth: colWidths.shakeExcess }}
+                      className="relative py-1.5 px-2 bg-sky-500/10 text-sky-700 dark:text-sky-300 text-center border-r border-sky-500/20 font-bold whitespace-nowrap group select-none"
+                    >
+                      남는량(봉)
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'shakeExcess')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
                     </th>
 
-                    <th rowSpan={2} className="py-3.5 px-3 bg-sky-500/10 text-sky-700 dark:text-sky-300 text-right border-r border-sky-500/20 font-bold whitespace-nowrap min-w-[110px]">
-                      미니쉐이크 남음(봉)
+                    {/* Sub-headers for 스틱스콘 */}
+                    <th
+                      style={{ width: colWidths.stickPanels, minWidth: colWidths.stickPanels }}
+                      className="relative py-1.5 px-2 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-center font-black whitespace-nowrap group select-none"
+                    >
+                      판수
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'stickPanels')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
                     </th>
-
-                    <th rowSpan={2} className="py-3.5 px-3 text-right text-slate-700 dark:text-slate-300 font-bold whitespace-nowrap min-w-[90px]">삼각/바 남음</th>
-                    <th rowSpan={2} className="py-3.5 px-3 text-right text-indigo-500 dark:text-indigo-400 font-bold whitespace-nowrap min-w-[80px]">스틱 남음</th>
-                  </tr>
-                  <tr className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-200 text-[11px] font-extrabold border-b border-slate-300 dark:border-slate-800 text-center">
-                    <th className="py-1.5 px-2 text-amber-500 dark:text-amber-400 border-r border-slate-300 dark:border-slate-800 whitespace-nowrap min-w-[55px]">삼각 / 바</th>
-                    <th className="py-1.5 px-2 text-purple-400 dark:text-purple-300 border-r border-slate-300 dark:border-slate-800 whitespace-nowrap min-w-[55px]">스틱 / 큐브</th>
+                    {/* Category 3 Excess: 남는량(팩) */}
+                    <th
+                      style={{ width: colWidths.stickExcess, minWidth: colWidths.stickExcess }}
+                      className="relative py-1.5 px-2 text-center text-indigo-500 dark:text-indigo-400 font-bold whitespace-nowrap group select-none"
+                    >
+                      남는량(팩)
+                      <div
+                        onMouseDown={(e) => handleColResizeMouseDown(e, 'stickExcess')}
+                        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-amber-500 active:bg-amber-600 transition-colors z-30"
+                        title="드래그하여 열 너비 조절"
+                      />
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -712,6 +1126,7 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                       return (
                         <tr
                           key={`sep-${itemIdx}`}
+                          style={{ height: `${rowHeight}px` }}
                           onDragOver={(e) => handleDragOver(e, itemIdx)}
                           onDrop={(e) => handleDropRow(e, itemIdx)}
                           onDragEnd={handleDragEnd}
@@ -764,6 +1179,8 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                           onDragOver={handleDragOver}
                           onDrop={handleDropRow}
                           onDragEnd={handleDragEnd}
+                          rowHeight={rowHeight}
+                          onRowResizeStart={handleRowResizeMouseDown}
                         />
                       );
                     } else {
@@ -780,6 +1197,8 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                           onDragOver={handleDragOver}
                           onDrop={handleDropRow}
                           onDragEnd={handleDragEnd}
+                          rowHeight={rowHeight}
+                          onRowResizeStart={handleRowResizeMouseDown}
                         />
                       );
                     }
@@ -795,35 +1214,34 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                     <td className="py-4 px-3 text-right text-emerald-400 text-xl font-black bg-emerald-500/10 whitespace-nowrap">
                       {grandTotalAllPanels} 판
                     </td>
-                    <td className="py-4 px-3 text-right whitespace-nowrap">{items.reduce((a, i) => a + i.order_qty, 0)}개/봉/팩</td>
-                    <td className="py-4 px-3 text-right whitespace-nowrap">{items.reduce((a, i) => a + i.extra_qty, 0)}개/봉/팩</td>
+                    {/* 삼각스콘 합계 */}
+                    <td className="py-4 px-3 text-center text-slate-400 whitespace-nowrap">-</td>
+                    <td className="py-4 px-3 text-center text-slate-400 whitespace-nowrap">-</td>
                     {showRequiredQty && (
-                      <td className="py-4 px-3 text-right text-amber-600 dark:text-amber-300 whitespace-nowrap">
-                        {items.reduce((a, i) => a + i.required_qty, 0)}개/봉/팩
-                      </td>
+                      <td className="py-4 px-3 text-center text-slate-400 whitespace-nowrap">-</td>
                     )}
-                    <td className="py-4 px-3 text-right whitespace-nowrap">{items.reduce((a, i) => a + i.carryover_qty, 0)}개/봉/팩</td>
-                    <td className="py-4 px-3 text-right text-amber-600 dark:text-amber-400 text-base whitespace-nowrap">
-                      {sconeItemsOnly.reduce((a, i) => a + i.production_qty, 0)}개
-                    </td>
+                    <td className="py-4 px-3 text-center text-slate-400 whitespace-nowrap">-</td>
+                    <td className="py-4 px-3 text-center text-slate-400 whitespace-nowrap">-</td>
                     <td className="py-4 px-3 text-right text-amber-700 dark:text-amber-400 font-mono font-bold whitespace-nowrap">
                       {roundHalf(combinedTriangleRows.reduce((a, r) => a + r.sconeDoughPanels, 0) + combinedBarRows.reduce((a, r) => a + r.sconeDoughPanels, 0))}판
                     </td>
                     <td className="py-4 px-3 text-center text-slate-400 whitespace-nowrap">-</td>
-                    <td className="py-4 px-3 text-right text-purple-700 dark:text-purple-300 font-mono font-bold whitespace-nowrap">
-                      {halfpackItems.reduce((a, i) => a + i.order_qty, 0) + miniShakeItems.reduce((a, i) => a + i.order_qty, 0)}봉
+                    <td className="py-4 px-3 text-right text-amber-300 font-bold whitespace-nowrap border-r border-slate-300 dark:border-slate-800">
+                      {combinedTriangleRows.reduce((a, r) => a + r.excessQty, 0) + combinedBarRows.reduce((a, r) => a + r.excessQty, 0)}개
                     </td>
+
+                    {/* 미니큐브 합계 */}
+                    <td className="py-4 px-3 text-center text-slate-400 whitespace-nowrap">-</td>
                     <td className="py-4 px-3 text-right text-purple-700 dark:text-purple-300 font-mono font-bold whitespace-nowrap">
                       {roundHalf(halfpackItems.reduce((a, i) => a + i.order_qty, 0) / 2.0 + combinedMiniShakeRows.reduce((a, r) => a + r.panels, 0))}판
                     </td>
-                    <td className="py-4 px-3 text-right text-indigo-700 dark:text-indigo-300 font-mono font-bold whitespace-nowrap">
-                      {combinedTriangleRows.reduce((a, r) => a + r.stickPanels, 0)}판
-                    </td>
-                    <td className="py-4 px-3 text-right text-sky-700 dark:text-sky-300 font-mono font-bold whitespace-nowrap">
+                    <td className="py-4 px-3 text-right text-sky-700 dark:text-sky-300 font-mono font-bold whitespace-nowrap border-r border-sky-500/20">
                       {combinedMiniShakeRows.reduce((a, r) => a + r.excessBags, 0)}봉
                     </td>
-                    <td className="py-4 px-3 text-right text-amber-300 font-bold whitespace-nowrap">
-                      {combinedTriangleRows.reduce((a, r) => a + r.excessQty, 0) + combinedBarRows.reduce((a, r) => a + r.excessQty, 0)}개
+
+                    {/* 스틱스콘 합계 */}
+                    <td className="py-4 px-3 text-right text-indigo-700 dark:text-indigo-300 font-mono font-bold whitespace-nowrap">
+                      {combinedTriangleRows.reduce((a, r) => a + r.stickPanels, 0)}판
                     </td>
                     <td className="py-4 px-3 text-right text-indigo-300 font-bold whitespace-nowrap">
                       {combinedTriangleRows.reduce((a, r) => a + r.stickExcessPacks, 0)}팩
@@ -892,6 +1310,298 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
                     );
                   })}
                 </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Field Dough Production Record Card */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="p-4 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📋</span>
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                  생산 정리 표(디스트리뷰터)
+                </h3>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  (소분반죽 4판/1판 단위 자동 산출 및 냉동생지 차감 현장 연동)
+                </span>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-center border-collapse" style={{ fontSize: `${fontSize}px` }}>
+                <thead>
+                  <tr className="bg-slate-200/70 dark:bg-slate-800/70 text-slate-900 dark:text-slate-200 font-black border-b border-slate-300 dark:border-slate-700">
+                    <th colSpan={2} className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">오븐</th>
+                    <th rowSpan={2} className="py-2.5 px-3 border-r border-slate-300 dark:border-slate-700 text-left min-w-[140px]">제품명</th>
+                    <th rowSpan={2} className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-black text-sm">총 판수</th>
+                    <th rowSpan={2} className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 bg-amber-500/15 text-amber-800 dark:text-amber-300 font-black w-24">소분반죽(4판)</th>
+                    <th rowSpan={2} className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 bg-amber-500/15 text-amber-800 dark:text-amber-300 font-black w-24">소분반죽(1판)</th>
+                    <th rowSpan={2} className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 w-24">냉동생지(4판)</th>
+                    <th rowSpan={2} className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 w-24">냉동생지(1판)</th>
+                    <th colSpan={1} className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-black">
+                      삼각&바스콘
+                    </th>
+                    <th colSpan={1} className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 bg-purple-500/10 text-purple-700 dark:text-purple-300 font-black">
+                      하프팩&미니쉐이크
+                    </th>
+                    <th colSpan={1} className="py-2 px-2 bg-blue-500/10 text-blue-700 dark:text-blue-300 font-black">
+                      스틱스콘
+                    </th>
+                  </tr>
+                  <tr className="bg-slate-200/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-300 text-[11px] font-bold border-b border-slate-300 dark:border-slate-700">
+                    <th className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 w-16">삼각/바</th>
+                    <th className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 w-16 text-purple-700 dark:text-purple-300">스틱/큐브</th>
+                    <th className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-black w-20">판수</th>
+                    <th className="py-2 px-2 border-r border-slate-300 dark:border-slate-700 bg-purple-500/10 text-purple-700 dark:text-purple-300 font-black w-20">판수</th>
+                    <th className="py-2 px-2 bg-blue-500/10 text-blue-700 dark:text-blue-300 font-black w-20">판수</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {unifiedRows.map((uRow, idx) => {
+                    if (uRow.type === 'separator') {
+                      return (
+                        <tr key={`field-sep-${idx}`} className="bg-slate-100/90 dark:bg-slate-950/90 border-y-2 border-slate-300 dark:border-slate-700">
+                          <td colSpan={11} className="py-2.5 px-4 text-center">
+                            <span className="font-extrabold text-xs text-amber-500 dark:text-amber-400">
+                              ───────── 생산팀 구분 공백 영역 ─────────
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    } else if (uRow.type === 'scone') {
+                      const row = uRow.row;
+                      const secOven = row.matchedHp?.oven_number || row.matchedStick?.oven_number;
+                      const isBar = row.sconeItem.category === '바';
+                      const defaultDough = calculateDoughPortions(row.finalPanels);
+                      const rowKey = `scone_${row.sconeItem.product_name}`;
+                      const currentOverrides = fieldOverrides[rowKey] || {};
+                      const frozenFourVal = currentOverrides.frozenFour !== undefined ? currentOverrides.frozenFour : 0;
+                      const frozenOneVal = currentOverrides.frozenOne !== undefined ? currentOverrides.frozenOne : 0;
+                      const fourVal = currentOverrides.four !== undefined ? currentOverrides.four : Math.max(0, defaultDough.fourPanels - frozenFourVal);
+                      const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, defaultDough.onePanels - frozenOneVal);
+
+                      return (
+                        <tr key={`field-${row.sconeItem.product_name}-${idx}`} style={{ height: `${rowHeight}px` }} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                          <td className="py-1 px-2 font-mono font-bold text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-800">
+                            {row.sconeItem.oven_number || '1'}
+                          </td>
+                          <td className="py-1 px-2 font-mono font-bold text-purple-700 dark:text-purple-300 border-r border-slate-200 dark:border-slate-800">
+                            {secOven || '-'}
+                          </td>
+                          <td className="py-1 px-3 text-left font-extrabold text-slate-900 dark:text-slate-100 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] mr-1.5 font-bold ${
+                              isBar ? 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            }`}>
+                              {isBar ? '바' : '삼각'}
+                            </span>
+                            {row.sconeItem.product_name}
+                          </td>
+                          <td className="py-1 px-3 font-black text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-r border-slate-200 dark:border-slate-800 text-sm">
+                            {row.finalPanels}판
+                          </td>
+                          <td className="py-1 px-2 bg-amber-500/5 border-r border-slate-200 dark:border-slate-800">
+                            <input
+                              type="number"
+                              value={fourVal}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              onChange={(e) => handleFieldOverrideChange(rowKey, 'four', parseInt(e.target.value, 10) || 0)}
+                              style={{ fontSize: `${fontSize}px` }}
+                              className="w-16 py-1 px-1.5 text-center font-black text-amber-700 dark:text-amber-300 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-md focus:ring-1 focus:ring-amber-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                          </td>
+                          <td className="py-1 px-2 bg-amber-500/5 border-r border-slate-200 dark:border-slate-800">
+                            <input
+                              type="number"
+                              value={oneVal}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              onChange={(e) => handleFieldOverrideChange(rowKey, 'one', parseInt(e.target.value, 10) || 0)}
+                              style={{ fontSize: `${fontSize}px` }}
+                              className="w-16 py-1 px-1.5 text-center font-black text-amber-700 dark:text-amber-300 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-md focus:ring-1 focus:ring-amber-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                          </td>
+                          <td className="py-1 px-2 border-r border-slate-200 dark:border-slate-800">
+                            <input
+                              type="number"
+                              value={frozenFourVal === 0 ? '' : frozenFourVal}
+                              placeholder="0"
+                              onWheel={(e) => e.currentTarget.blur()}
+                              onChange={(e) => handleFieldOverrideChange(rowKey, 'frozenFour', parseInt(e.target.value, 10) || 0)}
+                              style={{ fontSize: `${fontSize}px` }}
+                              className="w-16 py-1 px-1.5 text-center font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-md focus:ring-1 focus:ring-amber-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-slate-400"
+                            />
+                          </td>
+                          <td className="py-1 px-2 border-r border-slate-200 dark:border-slate-800">
+                            <input
+                              type="number"
+                              value={frozenOneVal === 0 ? '' : frozenOneVal}
+                              placeholder="0"
+                              onWheel={(e) => e.currentTarget.blur()}
+                              onChange={(e) => handleFieldOverrideChange(rowKey, 'frozenOne', parseInt(e.target.value, 10) || 0)}
+                              style={{ fontSize: `${fontSize}px` }}
+                              className="w-16 py-1 px-1.5 text-center font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-md focus:ring-1 focus:ring-amber-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-slate-400"
+                            />
+                          </td>
+                          <td className="py-1 px-2 font-black text-amber-700 dark:text-amber-400 bg-amber-500/5 border-r border-slate-200 dark:border-slate-800">
+                            {row.sconeDoughPanels}판
+                          </td>
+                          <td className="py-1 px-2 font-black text-purple-700 dark:text-purple-400 bg-purple-500/5 border-r border-slate-200 dark:border-slate-800">
+                            {row.hpPanels > 0 ? `${row.hpPanels}판` : '-'}
+                          </td>
+                          <td className="py-1 px-2 font-black text-blue-700 dark:text-blue-400 bg-blue-500/5">
+                            {row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}
+                          </td>
+                        </tr>
+                      );
+                    } else {
+                      const row = uRow.row;
+                      const defaultDough = calculateDoughPortions(row.panels);
+                      const rowKey = `shake_${row.shakeItem.product_name}`;
+                      const currentOverrides = fieldOverrides[rowKey] || {};
+                      const frozenFourVal = currentOverrides.frozenFour !== undefined ? currentOverrides.frozenFour : 0;
+                      const frozenOneVal = currentOverrides.frozenOne !== undefined ? currentOverrides.frozenOne : 0;
+                      const fourVal = currentOverrides.four !== undefined ? currentOverrides.four : Math.max(0, defaultDough.fourPanels - frozenFourVal);
+                      const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, defaultDough.onePanels - frozenOneVal);
+
+                      return (
+                        <tr key={`field-shake-${row.shakeItem.product_name}-${idx}`} style={{ height: `${rowHeight}px` }} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 bg-sky-500/5">
+                          <td className="py-1 px-2 font-mono text-slate-400 border-r border-slate-200 dark:border-slate-800">
+                            -
+                          </td>
+                          <td className="py-1 px-2 font-mono font-bold text-purple-700 dark:text-purple-300 border-r border-slate-200 dark:border-slate-800">
+                            {row.shakeItem.oven_number || '1'}
+                          </td>
+                          <td className="py-1 px-3 text-left font-extrabold text-slate-900 dark:text-slate-100 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] mr-1.5 font-bold bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">
+                              쉐이크
+                            </span>
+                            {row.shakeItem.product_name}
+                          </td>
+                          <td className="py-1 px-3 font-black text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-r border-slate-200 dark:border-slate-800 text-sm">
+                            {row.panels}판
+                          </td>
+                          <td className="py-1 px-2 bg-amber-500/5 border-r border-slate-200 dark:border-slate-800">
+                            <input
+                              type="number"
+                              value={fourVal}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              onChange={(e) => handleFieldOverrideChange(rowKey, 'four', parseInt(e.target.value, 10) || 0)}
+                              style={{ fontSize: `${fontSize}px` }}
+                              className="w-16 py-1 px-1.5 text-center font-black text-amber-700 dark:text-amber-300 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-md focus:ring-1 focus:ring-amber-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                          </td>
+                          <td className="py-1 px-2 bg-amber-500/5 border-r border-slate-200 dark:border-slate-800">
+                            <input
+                              type="number"
+                              value={oneVal}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              onChange={(e) => handleFieldOverrideChange(rowKey, 'one', parseInt(e.target.value, 10) || 0)}
+                              style={{ fontSize: `${fontSize}px` }}
+                              className="w-16 py-1 px-1.5 text-center font-black text-amber-700 dark:text-amber-300 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-md focus:ring-1 focus:ring-amber-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                          </td>
+                          <td className="py-1 px-2 border-r border-slate-200 dark:border-slate-800">
+                            <input
+                              type="number"
+                              value={frozenFourVal === 0 ? '' : frozenFourVal}
+                              placeholder="0"
+                              onWheel={(e) => e.currentTarget.blur()}
+                              onChange={(e) => handleFieldOverrideChange(rowKey, 'frozenFour', parseInt(e.target.value, 10) || 0)}
+                              style={{ fontSize: `${fontSize}px` }}
+                              className="w-16 py-1 px-1.5 text-center font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-md focus:ring-1 focus:ring-amber-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-slate-400"
+                            />
+                          </td>
+                          <td className="py-1 px-2 border-r border-slate-200 dark:border-slate-800">
+                            <input
+                              type="number"
+                              value={frozenOneVal === 0 ? '' : frozenOneVal}
+                              placeholder="0"
+                              onWheel={(e) => e.currentTarget.blur()}
+                              onChange={(e) => handleFieldOverrideChange(rowKey, 'frozenOne', parseInt(e.target.value, 10) || 0)}
+                              style={{ fontSize: `${fontSize}px` }}
+                              className="w-16 py-1 px-1.5 text-center font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-md focus:ring-1 focus:ring-amber-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-slate-400"
+                            />
+                          </td>
+                          <td className="py-1 px-2 font-mono text-slate-400 border-r border-slate-200 dark:border-slate-800">
+                            -
+                          </td>
+                          <td className="py-1 px-2 font-black text-purple-700 dark:text-purple-400 bg-purple-500/5 border-r border-slate-200 dark:border-slate-800">
+                            {row.panels}판
+                          </td>
+                          <td className="py-1 px-2 font-mono text-slate-400">
+                            -
+                          </td>
+                        </tr>
+                      );
+                    }
+                  })}
+                </tbody>
+                {/* Summary Footer */}
+                {(() => {
+                  let sumFour = 0;
+                  let sumOne = 0;
+                  let sumFrozenFour = 0;
+                  let sumFrozenOne = 0;
+
+                  unifiedRows.forEach((uRow) => {
+                    if (uRow.type === 'scone') {
+                      const row = uRow.row;
+                      const rowKey = `scone_${row.sconeItem.product_name}`;
+                      const currentOverrides = fieldOverrides[rowKey] || {};
+                      const def = calculateDoughPortions(row.finalPanels);
+                      const frozenFour = currentOverrides.frozenFour || 0;
+                      const frozenOne = currentOverrides.frozenOne || 0;
+                      sumFour += currentOverrides.four !== undefined ? currentOverrides.four : Math.max(0, def.fourPanels - frozenFour);
+                      sumOne += currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, def.onePanels - frozenOne);
+                      sumFrozenFour += frozenFour;
+                      sumFrozenOne += frozenOne;
+                    } else if (uRow.type === 'shake') {
+                      const row = uRow.row;
+                      const rowKey = `shake_${row.shakeItem.product_name}`;
+                      const currentOverrides = fieldOverrides[rowKey] || {};
+                      const def = calculateDoughPortions(row.panels);
+                      const frozenFour = currentOverrides.frozenFour || 0;
+                      const frozenOne = currentOverrides.frozenOne || 0;
+                      sumFour += currentOverrides.four !== undefined ? currentOverrides.four : Math.max(0, def.fourPanels - frozenFour);
+                      sumOne += currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, def.onePanels - frozenOne);
+                      sumFrozenFour += frozenFour;
+                      sumFrozenOne += frozenOne;
+                    }
+                  });
+
+                  return (
+                    <tfoot className="bg-slate-100 dark:bg-slate-950 border-t-2 border-slate-300 dark:border-slate-800 font-bold text-slate-900 dark:text-slate-100">
+                      <tr>
+                        <td colSpan={3} className="py-3 px-3 text-center font-extrabold whitespace-nowrap">
+                          전체 총 합계 ({items.length}개 제품)
+                        </td>
+                        <td className="py-3 px-3 text-emerald-700 dark:text-emerald-400 text-lg font-black bg-emerald-500/10 whitespace-nowrap border-r border-slate-300 dark:border-slate-800">
+                          {grandTotalAllPanels} 판
+                        </td>
+                        <td className="py-3 px-2 text-amber-700 dark:text-amber-300 font-mono font-black text-sm bg-amber-500/15 border-r border-slate-300 dark:border-slate-800">
+                          {sumFour}
+                        </td>
+                        <td className="py-3 px-2 text-amber-700 dark:text-amber-300 font-mono font-black text-sm bg-amber-500/15 border-r border-slate-300 dark:border-slate-800">
+                          {sumOne}
+                        </td>
+                        <td className="py-3 px-2 text-slate-800 dark:text-slate-200 font-mono font-bold border-r border-slate-300 dark:border-slate-800">
+                          {sumFrozenFour > 0 ? sumFrozenFour : '-'}
+                        </td>
+                        <td className="py-3 px-2 text-slate-800 dark:text-slate-200 font-mono font-bold border-r border-slate-300 dark:border-slate-800">
+                          {sumFrozenOne > 0 ? sumFrozenOne : '-'}
+                        </td>
+                        <td className="py-3 px-2 text-amber-700 dark:text-amber-400 font-mono font-bold bg-amber-500/10 border-r border-slate-300 dark:border-slate-800">
+                          {roundHalf(combinedTriangleRows.reduce((a, r) => a + r.sconeDoughPanels, 0) + combinedBarRows.reduce((a, r) => a + r.sconeDoughPanels, 0))}판
+                        </td>
+                        <td className="py-3 px-2 text-purple-700 dark:text-purple-300 font-mono font-bold bg-purple-500/10 border-r border-slate-300 dark:border-slate-800">
+                          {roundHalf(halfpackItems.reduce((a, i) => a + i.order_qty, 0) / 2.0 + combinedMiniShakeRows.reduce((a, r) => a + r.panels, 0))}판
+                        </td>
+                        <td className="py-3 px-2 text-indigo-700 dark:text-indigo-300 font-mono font-bold bg-blue-500/10">
+                          {combinedTriangleRows.reduce((a, r) => a + r.stickPanels, 0)}판
+                        </td>
+                      </tr>
+                    </tfoot>
+                  );
+                })()}
               </table>
             </div>
           </div>

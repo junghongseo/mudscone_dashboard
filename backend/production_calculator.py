@@ -260,15 +260,20 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
     order_id_col = None
     tracking_col = None
     buyer_name_col = None
-    buyer_phone_col = None
     receiver_name_col = None
-    receiver_phone_col = None
     product_col = None
     option_col = None
     qty_col = None
     address_col = None
 
-    max_cols = max(target_sheet.max_column, 50)
+    buyer_mobile_cols = []
+    buyer_tel_cols = []
+    receiver_mobile_cols = []
+    receiver_tel_cols = []
+    general_phone_cols = []
+
+    max_cols = max(target_sheet.max_column, 60)
+
 
     for r in range(1, min(10, target_sheet.max_row + 1)):
         row_cells = [str(target_sheet.cell(r, c).value or '').strip() for c in range(1, max_cols + 1)]
@@ -290,39 +295,51 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
             elif any(k in clean_val for k in ['주문번호', '발주번호', '주문고유번호', '배송번호', '쇼핑몰주문번호', '원주문번호']):
                 if not order_id_col: order_id_col = col_num
 
-            # 3. Buyer Phone column (주문자 전화번호 / 연락처)
-            elif any(b in clean_val for b in ['주문자', '구매자', '주문고객', '보내는', '송하인']) and any(p in clean_val for p in ['전화', '연락처', '휴대폰', '핸드폰', '이동전화', 'tel', 'phone', 'hp']):
-                if not buyer_phone_col: buyer_phone_col = col_num
+            # 3. Buyer Mobile Phone (주문자 휴대폰 / 이동전화 / 핸드폰) -> Highest Priority
+            elif any(b in clean_val for b in ['주문자', '구매자', '주문고객', '보내는', '송하인']) and any(p in clean_val for p in ['휴대폰', '핸드폰', '이동전화', 'mobile', 'hp']):
+                buyer_mobile_cols.append(col_num)
 
-            # 4. Buyer Name column (주문자명 / 구매자명)
+            # 4. Buyer Tel (주문자 유선전화 / 일반연락처)
+            elif any(b in clean_val for b in ['주문자', '구매자', '주문고객', '보내는', '송하인']) and any(p in clean_val for p in ['전화', '연락처', 'tel', 'phone']):
+                buyer_tel_cols.append(col_num)
+
+            # 5. Buyer Name column (주문자명 / 구매자명)
             elif any(b in clean_val for b in ['주문자명', '구매자명', '주문자이름', '구매자이름', '주문고객명', '주문자인', '보내는사람', '보내는분', '송하인명', '송하인']) or clean_val in ['주문자', '구매자', '주문고객']:
-                if not any(ex in clean_val for ex in ['전화', '연락처', '휴대폰', '핸드폰', '주소', '우편', '이메일', 'id', '아이디', '수취', '수령', '받는']):
+                if not any(ex in clean_val for ex in ['전화', '연락처', '휴대폰', '핸드폰', '이동전화', '주소', '우편', '이메일', 'id', '아이디', '수취', '수령', '받는']):
                     if not buyer_name_col: buyer_name_col = col_num
 
-            # 5. Receiver Phone column (수취인 전화번호 / 연락처)
-            elif any(r_kw in clean_val for r in ['수취인', '수령인', '받는사람', '받는분', '수하인'] for r_kw in [r]) and any(p in clean_val for p in ['전화', '연락처', '휴대폰', '핸드폰', '이동전화', 'tel', 'phone', 'hp']):
-                if not receiver_phone_col: receiver_phone_col = col_num
+            # 6. Receiver Mobile Phone (수취인 휴대폰 / 이동전화 / 핸드폰)
+            elif any(r_kw in clean_val for r_kw in ['수취인', '수령인', '받는사람', '받는분', '수하인']) and any(p in clean_val for p in ['휴대폰', '핸드폰', '이동전화', 'mobile', 'hp']):
+                receiver_mobile_cols.append(col_num)
 
-            # 6. Receiver Name column (수취인명 / 수령인)
-            elif any(r_kw in clean_val for r in ['수취인명', '수령인명', '받는분', '받는사람', '수하인명'] for r_kw in [r]) or clean_val in ['수취인', '수령인', '수하인']:
-                if not any(ex in clean_val for ex in ['전화', '연락처', '휴대폰', '핸드폰', '주소', '우편']):
+            # 7. Receiver Tel (수취인 유선전화 / 연락처)
+            elif any(r_kw in clean_val for r_kw in ['수취인', '수령인', '받는사람', '받는분', '수하인']) and any(p in clean_val for p in ['전화', '연락처', 'tel', 'phone']):
+                receiver_tel_cols.append(col_num)
+
+            # 8. Receiver Name column (수취인명 / 수령인)
+            elif any(r_kw in clean_val for r_kw in ['수취인명', '수령인명', '받는분', '받는사람', '수하인명']) or clean_val in ['수취인', '수령인', '수하인']:
+                if not any(ex in clean_val for ex in ['전화', '연락처', '휴대폰', '핸드폰', '이동전화', '주소', '우편']):
                     if not receiver_name_col: receiver_name_col = col_num
 
-            # 7. Product column
+            # 9. General Phone Column
+            elif any(p in clean_val for p in ['휴대폰', '핸드폰', '이동전화', '연락처', '전화번호', 'phone', 'mobile', 'hp']):
+                general_phone_cols.append(col_num)
+
+            # 10. Product column
             elif any(p in clean_val for p in ['상품명', '품목명', '공급처상품명']):
                 if not product_col: product_col = col_num
                 found_product = True
 
-            # 8. Option column
+            # 11. Option column
             elif any(o in clean_val for o in ['옵션', '옵션명', '품목옵션', '옵션정보', '공급처옵션명']):
                 if not option_col: option_col = col_num
 
-            # 9. Qty column
+            # 12. Qty column
             elif any(q in clean_val for q in ['수량', '주문수량', '품목수량']):
                 if not qty_col: qty_col = col_num
                 found_qty = True
 
-            # 10. Address column
+            # 13. Address column
             elif any(a in clean_val for a in ['주소', '수취인주소', '배송지', '배송지주소']):
                 if not address_col: address_col = col_num
 
@@ -334,7 +351,19 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
     if not option_col: option_col = 6
     if not qty_col: qty_col = 17
 
-    print(f"[ShipmentParser] Headers: header_row={header_row_idx}, tracking={tracking_col}, order_id={order_id_col}, buyer_name={buyer_name_col}, buyer_phone={buyer_phone_col}, receiver_name={receiver_name_col}, receiver_phone={receiver_phone_col}, prod={product_col}, qty={qty_col}")
+    def format_phone_number(raw_p: str) -> str:
+        if not raw_p:
+            return ""
+        digits = re.sub(r'[^0-9]', '', str(raw_p).strip())
+        if len(digits) == 11 and digits.startswith('01'):
+            return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+        elif len(digits) == 10 and digits.startswith('01'):
+            return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+        elif len(digits) >= 9:
+            return str(raw_p).strip()
+        return str(raw_p).strip()
+
+    print(f"[ShipmentParser] Headers: header_row={header_row_idx}, tracking={tracking_col}, order_id={order_id_col}, buyer_name={buyer_name_col}, buyer_mobiles={buyer_mobile_cols}, buyer_tels={buyer_tel_cols}, receiver_name={receiver_name_col}, receiver_mobiles={receiver_mobile_cols}")
 
     order_yogurt_map: Dict[str, int] = {}
     order_yof_map: Dict[str, int] = {}
@@ -348,9 +377,7 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
         raw_order_id = str(target_sheet.cell(r, order_id_col).value or '').strip() if order_id_col else None
         raw_tracking = str(target_sheet.cell(r, tracking_col).value or '').strip() if tracking_col else None
         raw_buyer_name = str(target_sheet.cell(r, buyer_name_col).value or '').strip() if buyer_name_col else ''
-        raw_buyer_phone = str(target_sheet.cell(r, buyer_phone_col).value or '').strip() if buyer_phone_col else ''
         raw_receiver = str(target_sheet.cell(r, receiver_name_col).value or '').strip() if receiver_name_col else None
-        raw_receiver_phone = str(target_sheet.cell(r, receiver_phone_col).value or '').strip() if receiver_phone_col else ''
         raw_product = str(target_sheet.cell(r, product_col).value or '').strip()
         raw_option = str(target_sheet.cell(r, option_col).value or '').strip() if option_col else ''
         raw_qty_val = target_sheet.cell(r, qty_col).value
@@ -358,6 +385,51 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
 
         if not raw_product and not raw_option and not raw_tracking:
             continue
+
+        # Extract best phone number in order of priority
+        detected_phone = ""
+        # Priority 1: Buyer Mobile
+        for c in buyer_mobile_cols:
+            val = str(target_sheet.cell(r, c).value or '').strip()
+            if val and val not in ['-', '', 'None', 'nan', '0']:
+                detected_phone = format_phone_number(val)
+                break
+        # Priority 2: Buyer Tel
+        if not detected_phone:
+            for c in buyer_tel_cols:
+                val = str(target_sheet.cell(r, c).value or '').strip()
+                if val and val not in ['-', '', 'None', 'nan', '0']:
+                    detected_phone = format_phone_number(val)
+                    break
+        # Priority 3: Receiver Mobile
+        if not detected_phone:
+            for c in receiver_mobile_cols:
+                val = str(target_sheet.cell(r, c).value or '').strip()
+                if val and val not in ['-', '', 'None', 'nan', '0']:
+                    detected_phone = format_phone_number(val)
+                    break
+        # Priority 4: Receiver Tel
+        if not detected_phone:
+            for c in receiver_tel_cols:
+                val = str(target_sheet.cell(r, c).value or '').strip()
+                if val and val not in ['-', '', 'None', 'nan', '0']:
+                    detected_phone = format_phone_number(val)
+                    break
+        # Priority 5: General Phone Columns
+        if not detected_phone:
+            for c in general_phone_cols:
+                val = str(target_sheet.cell(r, c).value or '').strip()
+                if val and val not in ['-', '', 'None', 'nan', '0']:
+                    detected_phone = format_phone_number(val)
+                    break
+        # Priority 6: Scan all cells in the row for a 010 phone pattern
+        if not detected_phone:
+            for c in range(1, max_cols + 1):
+                val = str(target_sheet.cell(r, c).value or '').strip()
+                m = re.search(r'01[0-9]-?[0-9]{3,4}-?[0-9]{4}', val)
+                if m:
+                    detected_phone = format_phone_number(m.group(0))
+                    break
 
         try:
             qty = int(float(str(raw_qty_val).replace(',', '').strip()))
@@ -378,7 +450,7 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
 
             # Prioritize buyer_name, fallback to receiver name if buyer name missing
             best_name = raw_buyer_name or raw_receiver or ''
-            best_phone = raw_buyer_phone or raw_receiver_phone or ''
+            best_phone = detected_phone or ''
 
             if best_name and (not tracking_groups[raw_tracking]["buyer_name"] or tracking_groups[raw_tracking]["buyer_name"] in ['이름 없음', '-']):
                 tracking_groups[raw_tracking]["buyer_name"] = best_name
@@ -389,6 +461,7 @@ def parse_shipment_notes_excel(file_contents: bytes) -> Dict[str, Any]:
                 tracking_groups[raw_tracking]["orders"].add(raw_order_id)
             else:
                 tracking_groups[raw_tracking]["orders"].add(f"row_{r}")
+
 
 
         full_prod_text = f"{raw_product} {raw_option}".upper()

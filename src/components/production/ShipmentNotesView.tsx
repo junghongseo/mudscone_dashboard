@@ -37,82 +37,93 @@ interface ShipmentNotesViewProps {
 
 const STORAGE_KEY = 'mudscone_shipment_notes_v1';
 
+const getInitialShipmentData = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to parse saved shipment notes', e);
+  }
+  return null;
+};
+
 export const ShipmentNotesView: React.FC<ShipmentNotesViewProps> = ({
   recordDate,
   initialShipmentCount = 0,
   onShipmentCountChange,
   onBack,
 }) => {
+  // Load saved data once synchronously
+  const savedData = getInitialShipmentData();
+
   // 1. Service Scone
-  const [serviceScone, setServiceScone] = useState<ServiceSconeData>({
-    vip: 0,
-    accident: 0,
-    freeShipping: 0,
-    staff: 0,
-  });
+  const [serviceScone, setServiceScone] = useState<ServiceSconeData>(() =>
+    savedData?.serviceScone || { vip: 0, accident: 0, freeShipping: 0, staff: 0 }
+  );
 
   // 2. Special notes (특이사항)
-  const [specialNotes, setSpecialNotes] = useState<ListItem[]>([
-    { id: '1', name: '', info: '', note: '' },
-  ]);
+  const [specialNotes, setSpecialNotes] = useState<ListItem[]>(() =>
+    (savedData?.specialNotes && Array.isArray(savedData.specialNotes))
+      ? savedData.specialNotes
+      : [{ id: '1', name: '', info: '', note: '' }]
+  );
 
   // 3. Pickup customers (픽업)
-  const [pickupList, setPickupList] = useState<ListItem[]>([
-    { id: '1', name: '', info: '', note: '' },
-  ]);
+  const [pickupList, setPickupList] = useState<ListItem[]>(() =>
+    (savedData?.pickupList && Array.isArray(savedData.pickupList))
+      ? savedData.pickupList
+      : [{ id: '1', name: '', info: '', note: '' }]
+  );
 
   // 4. Jeju Island customers (제주도 >> 로젠택배)
-  const [jejuList, setJejuList] = useState<ListItem[]>([
-    { id: '1', name: '', info: '', note: '' },
-  ]);
+  const [jejuList, setJejuList] = useState<ListItem[]>(() =>
+    (savedData?.jejuList && Array.isArray(savedData.jejuList))
+      ? savedData.jejuList
+      : [{ id: '1', name: '', info: '', note: '' }]
+  );
 
   // 5. Local In-district customers (관내)
-  const [localList, setLocalList] = useState<ListItem[]>([
-    { id: '1', name: '', info: '', note: '' },
-  ]);
+  const [localList, setLocalList] = useState<ListItem[]>(() =>
+    (savedData?.localList && Array.isArray(savedData.localList))
+      ? savedData.localList
+      : [{ id: '1', name: '', info: '', note: '' }]
+  );
 
   // 6. Greek Yogurt counts (1 to 10)
-  const [greekCounts, setGreekCounts] = useState<Record<number, number>>({
-    1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0,
-  });
+  const [greekCounts, setGreekCounts] = useState<Record<number, number>>(() =>
+    savedData?.greekCounts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 }
+  );
 
   // 7. YOF counts (1 to 3)
-  const [yofCounts, setYofCounts] = useState<Record<number, number>>({
-    1: 0, 2: 0, 3: 0,
-  });
+  const [yofCounts, setYofCounts] = useState<Record<number, number>>(() =>
+    savedData?.yofCounts || { 1: 0, 2: 0, 3: 0 }
+  );
 
   // 8. Total Shipment Count
-  const [shipmentCount, setShipmentCount] = useState<number>(initialShipmentCount);
+  const [shipmentCount, setShipmentCount] = useState<number>(() =>
+    savedData?.shipmentCount !== undefined ? savedData.shipmentCount : initialShipmentCount
+  );
 
   // 9. Combined Shipments (합배송 - 동일 송장 다중 주문 목록)
-  const [combinedShipments, setCombinedShipments] = useState<CombinedShipmentItem[]>([]);
+  const [combinedShipments, setCombinedShipments] = useState<CombinedShipmentItem[]>(() =>
+    (savedData?.combinedShipments && Array.isArray(savedData.combinedShipments))
+      ? savedData.combinedShipments
+      : []
+  );
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Status & loading
   const [loadingExcel, setLoadingExcel] = useState<boolean>(false);
   const [excelSuccessMsg, setExcelSuccessMsg] = useState<string | null>(null);
 
-  // Load from localStorage on mount
+  // Sync initial shipment count with parent on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.serviceScone) setServiceScone(parsed.serviceScone);
-        if (parsed.specialNotes && Array.isArray(parsed.specialNotes)) setSpecialNotes(parsed.specialNotes);
-        if (parsed.pickupList && Array.isArray(parsed.pickupList)) setPickupList(parsed.pickupList);
-        if (parsed.jejuList && Array.isArray(parsed.jejuList)) setJejuList(parsed.jejuList);
-        if (parsed.localList && Array.isArray(parsed.localList)) setLocalList(parsed.localList);
-        if (parsed.greekCounts) setGreekCounts(parsed.greekCounts);
-        if (parsed.yofCounts) setYofCounts(parsed.yofCounts);
-        if (parsed.shipmentCount !== undefined) setShipmentCount(parsed.shipmentCount);
-        if (parsed.combinedShipments && Array.isArray(parsed.combinedShipments)) setCombinedShipments(parsed.combinedShipments);
-      }
-    } catch (e) {
-      console.error('Failed to load saved shipment notes', e);
+    if (shipmentCount > 0 && onShipmentCountChange) {
+      onShipmentCountChange(shipmentCount);
     }
   }, []);
-
 
   // Save to localStorage on change
   useEffect(() => {

@@ -519,17 +519,6 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
   const yoffKinakoQty = getMiscItemQty(['요프 (콩가루)', '요프콩가루', '콩가루 요프', '요프 콩가루']);
   const yoff6Qty = getMiscItemQty(['요프 (6종)', '요프6종', '요프 6종']);
 
-  if (isShipmentNotesOpen) {
-    return (
-      <ShipmentNotesView
-        recordDate={recordDate}
-        initialShipmentCount={shipmentCount}
-        onShipmentCountChange={setShipmentCount}
-        onBack={() => setIsShipmentNotesOpen(false)}
-      />
-    );
-  }
-
   if (isPrintViewOpen) {
     return (
       <ProductionPrintView
@@ -546,8 +535,18 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+    <>
+      <div className={isShipmentNotesOpen ? 'block' : 'hidden'}>
+        <ShipmentNotesView
+          recordDate={recordDate}
+          initialShipmentCount={shipmentCount}
+          onShipmentCountChange={setShipmentCount}
+          onBack={() => setIsShipmentNotesOpen(false)}
+        />
+      </div>
+
+      <div className={isShipmentNotesOpen ? 'hidden' : 'space-y-6'}>
+        <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/30 flex items-center justify-center text-2xl font-black shadow-lg">
             🥐
@@ -1635,6 +1634,7 @@ export const ProductionCalculator: React.FC<ProductionCalculatorProps> = ({
         onClose={() => setIsCatalogModalOpen(false)}
         onRefreshCatalog={handleRefreshCatalog}
       />
-    </div>
+      </div>
+    </>
   );
 };

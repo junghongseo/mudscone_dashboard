@@ -381,24 +381,31 @@ export const App: React.FC = () => {
 
       {/* Main Workspace Content */}
       <main className="max-w-7xl w-full mx-auto px-4 lg:px-8 pt-6 flex-1 space-y-6">
-        {activeTab === 'overview' ? (
+        <div className={activeTab === 'overview' ? 'space-y-6' : 'hidden'}>
           <OverviewDashboard
             brands={syncedBrandDataMap}
             revenueRecords={revenueRecords}
             onSelectBrand={(brandId) => setActiveTab(brandId)}
           />
-        ) : activeTab === 'ledger' ? (
+        </div>
+
+        <div className={activeTab === 'ledger' ? 'space-y-6' : 'hidden'}>
           <RevenueLedger
             records={revenueRecords}
             onSaveRecord={handleSaveRevenueRecord}
             onDeleteRecord={handleDeleteRevenueRecord}
           />
-        ) : activeTab === 'production' ? (
-          <ProductionCalculator />
-        ) : activeTab === 'vat' ? (
-          <VatReportApp />
-        ) : (
+        </div>
 
+        <div className={activeTab === 'production' ? 'space-y-6' : 'hidden'}>
+          <ProductionCalculator />
+        </div>
+
+        <div className={activeTab === 'vat' ? 'space-y-6' : 'hidden'}>
+          <VatReportApp />
+        </div>
+
+        {activeTab !== 'overview' && activeTab !== 'ledger' && activeTab !== 'production' && activeTab !== 'vat' && (
           <div className="space-y-6">
             {/* Brand Header Banner */}
             <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

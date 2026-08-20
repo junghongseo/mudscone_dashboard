@@ -202,8 +202,16 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
         }
         @media print {
           @page { size: landscape; margin: 3mm 4mm; }
-          *, *:before, *:after { box-shadow: none !important; text-shadow: none !important; }
-          html, body, .min-h-screen, div { background: #ffffff !important; color: #000000 !important; }
+          *, *:before, *:after { 
+            box-shadow: none !important; 
+            text-shadow: none !important; 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+          }
+          html, body, .min-h-screen { 
+            background: #ffffff !important; 
+            color: #000000 !important; 
+          }
           .print-sheet { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; }
           .page-break-before { page-break-before: always !important; break-before: page !important; margin-top: 0 !important; }
           .no-print { display: none !important; }
@@ -218,6 +226,8 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
             padding-bottom: 0px !important;
             line-height: 1.1 !important;
             vertical-align: middle !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       `}</style>
@@ -482,95 +492,103 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-300">
-                {unifiedRows.map((uRow, idx) => {
-                  if (uRow.type === 'separator') {
-                    return (
-                      <tr key={`sep-${idx}`} className="bg-white">
-                        <td colSpan={showRequiredQty ? 16 : 15} className="border border-gray-400 py-1.5 bg-white"></td>
-                      </tr>
-                    );
-                  } else if (uRow.type === 'scone') {
-                    const row = uRow.row;
-                    const secOven = row.matchedHp?.oven_number || row.matchedStick?.oven_number;
-                    const isBar = row.sconeItem.category === '바';
-                    return (
-                      <tr key={`scone-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className="bg-white hover:bg-gray-50 border-b border-gray-300">
-                        <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{row.sconeItem.oven_number || '1'}</td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900">{secOven || '-'}</td>
-                        <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
-                          <span className={`inline-block px-1 py-0 rounded text-[9px] mr-1 ${isBar ? 'bg-orange-100 text-orange-900' : 'bg-amber-100 text-amber-900'}`}>
-                            {isBar ? '바' : '삼각'}
-                          </span>
-                          {row.sconeItem.product_name}
-                        </td>
+                {(() => {
+                  let nonSepIdx = 0;
+                  return unifiedRows.map((uRow, idx) => {
+                    if (uRow.type === 'separator') {
+                      return (
+                        <tr key={`sep-${idx}`} className="bg-white print:bg-white">
+                          <td colSpan={showRequiredQty ? 16 : 15} className="border border-gray-400 py-1.5 bg-white print:bg-white"></td>
+                        </tr>
+                      );
+                    }
+                    const isZebra = nonSepIdx % 2 === 0;
+                    nonSepIdx++;
+                    const zebraBgClass = isZebra ? 'bg-[#eef2f7] print:bg-[#eef2f7]' : 'bg-white print:bg-white';
 
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.finalPanels}판</td>
+                    if (uRow.type === 'scone') {
+                      const row = uRow.row;
+                      const secOven = row.matchedHp?.oven_number || row.matchedStick?.oven_number;
+                      const isBar = row.sconeItem.category === '바';
+                      return (
+                        <tr key={`scone-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className={`${zebraBgClass} hover:bg-amber-50/30 border-b border-gray-300`}>
+                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{row.sconeItem.oven_number || '1'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900">{secOven || '-'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
+                            <span className={`inline-block px-1 py-0 rounded text-[9px] mr-1 ${isBar ? 'bg-orange-100 text-orange-900' : 'bg-amber-100 text-amber-900'}`}>
+                              {isBar ? '바' : '삼각'}
+                            </span>
+                            {row.sconeItem.product_name}
+                          </td>
 
-                        <td className="border border-gray-300 py-0.5 px-1 text-right text-[10px]">{row.sconeItem.order_qty}개</td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.sconeItem.extra_qty ? `${row.sconeItem.extra_qty}개` : '-'}</td>
-                        {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 bg-gray-50 text-[10px]">{row.sconeItem.required_qty}개</td>}
-                        <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.sconeItem.carryover_qty ? `${row.sconeItem.carryover_qty}개` : '-'}</td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900 bg-amber-50/50 text-[10px]">{row.sconeItem.production_qty}개</td>
-                        
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-amber-950 bg-amber-50">{row.sconeDoughPanels}판</td>
-                        
-                        <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.excessQty > 0 ? 'text-blue-700 bg-blue-50/60' : 'text-gray-400'}`}>
-                          {row.excessQty > 0 ? `${row.excessQty}개` : '-'}
-                        </td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.finalPanels}판</td>
 
-                        <td className="border border-gray-300 py-0.5 px-1 text-right text-purple-900 text-[10px]">{row.hpOrderBags > 0 ? `${row.hpOrderBags}봉` : '-'}</td>
-                        
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.hpPanels > 0 ? `${row.hpPanels}판` : '-'}</td>
-                        
-                        <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-[10px]">{row.sconeItem.order_qty}개</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.sconeItem.extra_qty ? `${row.sconeItem.extra_qty}개` : '-'}</td>
+                          {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 bg-gray-50/80 text-[10px]">{row.sconeItem.required_qty}개</td>}
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.sconeItem.carryover_qty ? `${row.sconeItem.carryover_qty}개` : '-'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900 bg-amber-50/50 text-[10px]">{row.sconeItem.production_qty}개</td>
+                          
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-amber-950 bg-amber-50">{row.sconeDoughPanels}판</td>
+                          
+                          <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.excessQty > 0 ? 'text-blue-700 bg-blue-50/60' : 'text-gray-400'}`}>
+                            {row.excessQty > 0 ? `${row.excessQty}개` : '-'}
+                          </td>
 
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-blue-950 bg-blue-50">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
-                        
-                        <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.stickExcessPacks > 0 ? 'text-indigo-700 bg-indigo-50/60' : 'text-gray-400'}`}>
-                          {row.stickExcessPacks > 0 ? `${row.stickExcessPacks}팩` : '-'}
-                        </td>
-                      </tr>
-                    );
-                  } else {
-                    const row = uRow.row;
-                    return (
-                      <tr key={`shake-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className="bg-sky-50/40 hover:bg-sky-50 border-b border-gray-300">
-                        <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
-                        <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
-                          <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 bg-sky-200 text-sky-950 font-bold">
-                            쉐이크
-                          </span>
-                          {row.shakeItem.product_name}
-                        </td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-purple-900 text-[10px]">{row.hpOrderBags > 0 ? `${row.hpOrderBags}봉` : '-'}</td>
+                          
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.hpPanels > 0 ? `${row.hpPanels}판` : '-'}</td>
+                          
+                          <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
 
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.panels}판</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-blue-950 bg-blue-50">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
+                          
+                          <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.stickExcessPacks > 0 ? 'text-indigo-700 bg-indigo-50/60' : 'text-gray-400'}`}>
+                            {row.stickExcessPacks > 0 ? `${row.stickExcessPacks}팩` : '-'}
+                          </td>
+                        </tr>
+                      );
+                    } else {
+                      const row = uRow.row;
+                      return (
+                        <tr key={`shake-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className={`${zebraBgClass} hover:bg-sky-50/50 border-b border-gray-300`}>
+                          <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
+                            <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 bg-sky-200 text-sky-950 font-bold">
+                              쉐이크
+                            </span>
+                            {row.shakeItem.product_name}
+                          </td>
 
-                        <td className="border border-gray-300 py-0.5 px-1 text-right text-[10px]">{row.orderBags}봉</td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.extraBags ? `${row.extraBags}봉` : '-'}</td>
-                        {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 bg-gray-50 text-[10px]">{row.orderBags + row.extraBags}봉</td>}
-                        <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.carryoverBags ? `${row.carryoverBags}봉` : '-'}</td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900 bg-amber-50/50 text-[10px]">{row.prodBags}봉</td>
-                        
-                        <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
-                        
-                        <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.panels}판</td>
 
-                        <td className="border border-gray-300 py-0.5 px-1 text-right text-purple-900 text-[10px]">{row.prodBags}봉</td>
-                        
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.panels}판</td>
-                        
-                        <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.excessBags > 0 ? 'text-sky-700 bg-sky-100' : 'text-gray-400'}`}>
-                          {row.excessBags > 0 ? `${row.excessBags}봉` : '-'}
-                        </td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-[10px]">{row.orderBags}봉</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.extraBags ? `${row.extraBags}봉` : '-'}</td>
+                          {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 bg-gray-50/80 text-[10px]">{row.orderBags + row.extraBags}봉</td>}
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.carryoverBags ? `${row.carryoverBags}봉` : '-'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900 bg-amber-50/50 text-[10px]">{row.prodBags}봉</td>
+                          
+                          <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
+                          
+                          <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
 
-                        <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
-                        
-                        <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
-                      </tr>
-                    );
-                  }
-                })}
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-purple-900 text-[10px]">{row.prodBags}봉</td>
+                          
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.panels}판</td>
+                          
+                          <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.excessBags > 0 ? 'text-sky-700 bg-sky-100' : 'text-gray-400'}`}>
+                            {row.excessBags > 0 ? `${row.excessBags}봉` : '-'}
+                          </td>
+
+                          <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
+                          
+                          <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
+                        </tr>
+                      );
+                    }
+                  });
+                })()}
               </tbody>
               <tfoot>
                 <tr className="bg-gray-100 font-bold border-t-2 border-gray-400 text-[10px]">
@@ -684,34 +702,41 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {ovenBakingRows.map((obRow, obIdx) => {
-                    if (obRow.is_separator) {
+                  {(() => {
+                    let nonSepIdx = 0;
+                    return ovenBakingRows.map((obRow, obIdx) => {
+                      if (obRow.is_separator) {
+                        return (
+                          <tr key={`ob-print-sep-${obIdx}`} className="bg-white print:bg-white">
+                            <td colSpan={5} className="border border-gray-300 py-3 bg-white print:bg-white"></td>
+                          </tr>
+                        );
+                      }
+                      const isZebra = nonSepIdx % 2 === 0;
+                      nonSepIdx++;
+                      const zebraBgClass = isZebra ? 'bg-[#eef2f7] print:bg-[#eef2f7]' : 'bg-white print:bg-white';
+
                       return (
-                        <tr key={`ob-print-sep-${obIdx}`} className="bg-white">
-                          <td colSpan={5} className="border border-gray-300 py-3 bg-white"></td>
+                        <tr key={`ob-print-${obRow.product_name}-${obIdx}`} style={{ height: `${pageStyles.p2.rowHeight}px` }} className={`${zebraBgClass} hover:bg-purple-50/40 border-b border-gray-300`}>
+                          <td className="border border-gray-300 py-0.5 px-1 text-left font-bold text-gray-900">
+                            {obRow.product_name}
+                          </td>
+                          <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-800">
+                            {obRow.oven_number}
+                          </td>
+                          <td className="border border-gray-300 py-0.5 px-1 font-black text-amber-950 bg-amber-50">
+                            {obRow.total_panels}
+                          </td>
+                          <td className="border border-gray-300 py-0.5 px-1 font-black text-indigo-950 bg-indigo-50 text-sm">
+                            {obRow.full_pans}
+                          </td>
+                          <td className="border border-gray-300 py-0.5 px-1 font-black text-sky-950 bg-sky-50 text-sm">
+                            {obRow.remainder_panels}
+                          </td>
                         </tr>
                       );
-                    }
-                    return (
-                      <tr key={`ob-print-${obRow.product_name}-${obIdx}`} style={{ height: `${pageStyles.p2.rowHeight}px` }} className="bg-white">
-                        <td className="border border-gray-300 py-0.5 px-1 text-left font-bold text-gray-900">
-                          {obRow.product_name}
-                        </td>
-                        <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-800">
-                          {obRow.oven_number}
-                        </td>
-                        <td className="border border-gray-300 py-0.5 px-1 font-black text-amber-950 bg-amber-50">
-                          {obRow.total_panels}
-                        </td>
-                        <td className="border border-gray-300 py-0.5 px-1 font-black text-indigo-950 bg-indigo-50 text-sm">
-                          {obRow.full_pans}
-                        </td>
-                        <td className="border border-gray-300 py-0.5 px-1 font-black text-sky-950 bg-sky-50 text-sm">
-                          {obRow.remainder_panels}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -827,109 +852,117 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-300">
-                  {unifiedRows.map((uRow, idx) => {
-                    if (uRow.type === 'separator') {
-                      return (
-                        <tr key={`sep-blank-${idx}`} className="bg-white">
-                          <td colSpan={11} className="border border-gray-400 py-1.5 bg-white"></td>
-                        </tr>
-                      );
-                    } else if (uRow.type === 'scone') {
-                      const row = uRow.row;
-                      const secOven = row.matchedHp?.oven_number || row.matchedStick?.oven_number;
-                      const isBar = row.sconeItem.category === '바';
-                      const dough = calculateDoughPortions(row.finalPanels);
-                      const rowKey = `scone_${row.sconeItem.product_name}`;
-                      const currentOverrides = fieldOverrides[rowKey] || {};
-                      const frozenFour = currentOverrides.frozenFour || 0;
-                      const frozenOne = currentOverrides.frozenOne || 0;
-                      const fourVal = currentOverrides.four !== undefined ? currentOverrides.four : Math.max(0, dough.fourPanels - frozenFour);
-                      const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, dough.onePanels - frozenOne);
+                  {(() => {
+                    let nonSepIdx = 0;
+                    return unifiedRows.map((uRow, idx) => {
+                      if (uRow.type === 'separator') {
+                        return (
+                          <tr key={`sep-blank-${idx}`} className="bg-white print:bg-white">
+                            <td colSpan={11} className="border border-gray-400 py-1.5 bg-white print:bg-white"></td>
+                          </tr>
+                        );
+                      }
+                      const isZebra = nonSepIdx % 2 === 0;
+                      nonSepIdx++;
+                      const zebraBgClass = isZebra ? 'bg-[#eef2f7] print:bg-[#eef2f7]' : 'bg-white print:bg-white';
 
-                      return (
-                        <tr key={`scone-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className="bg-white hover:bg-gray-50 border-b border-gray-300">
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{row.sconeItem.oven_number || '1'}</td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900">{secOven || '-'}</td>
-                          <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
-                            <span className={`inline-block px-1 py-0 rounded text-[9px] mr-1 ${isBar ? 'bg-orange-100 text-orange-900' : 'bg-amber-100 text-amber-900'}`}>
-                              {isBar ? '바' : '삼각'}
-                            </span>
-                            {row.sconeItem.product_name}
-                          </td>
+                      if (uRow.type === 'scone') {
+                        const row = uRow.row;
+                        const secOven = row.matchedHp?.oven_number || row.matchedStick?.oven_number;
+                        const isBar = row.sconeItem.category === '바';
+                        const dough = calculateDoughPortions(row.finalPanels);
+                        const rowKey = `scone_${row.sconeItem.product_name}`;
+                        const currentOverrides = fieldOverrides[rowKey] || {};
+                        const frozenFour = currentOverrides.frozenFour || 0;
+                        const frozenOne = currentOverrides.frozenOne || 0;
+                        const fourVal = currentOverrides.four !== undefined ? currentOverrides.four : Math.max(0, dough.fourPanels - frozenFour);
+                        const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, dough.onePanels - frozenOne);
 
-                          {/* 총 판수 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.finalPanels}판</td>
+                        return (
+                          <tr key={`scone-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className={`${zebraBgClass} hover:bg-amber-50/30 border-b border-gray-300`}>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{row.sconeItem.oven_number || '1'}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900">{secOven || '-'}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
+                              <span className={`inline-block px-1 py-0 rounded text-[9px] mr-1 ${isBar ? 'bg-orange-100 text-orange-900' : 'bg-amber-100 text-amber-900'}`}>
+                                {isBar ? '바' : '삼각'}
+                              </span>
+                              {row.sconeItem.product_name}
+                            </td>
 
-                          {/* 소분반죽 차감 반영값 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{fourVal}</td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{oneVal}</td>
-                          
-                          {/* 냉동생지 기입값 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
-                            {frozenFour > 0 ? `${frozenFour}` : '-'}
-                          </td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
-                            {frozenOne > 0 ? `${frozenOne}` : '-'}
-                          </td>
-                          
-                          {/* 삼각&바스콘 판수 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-amber-950 bg-amber-50">{row.sconeDoughPanels}판</td>
-                          
-                          {/* 하프팩 판수 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.hpPanels > 0 ? `${row.hpPanels}판` : '-'}</td>
-                          
-                          {/* 스틱 판수 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-blue-950 bg-blue-50">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
-                        </tr>
-                      );
-                    } else {
-                      const row = uRow.row;
-                      const dough = calculateDoughPortions(row.panels);
-                      const rowKey = `shake_${row.shakeItem.product_name}`;
-                      const currentOverrides = fieldOverrides[rowKey] || {};
-                      const frozenFour = currentOverrides.frozenFour || 0;
-                      const frozenOne = currentOverrides.frozenOne || 0;
-                      const fourVal = currentOverrides.four !== undefined ? currentOverrides.four : Math.max(0, dough.fourPanels - frozenFour);
-                      const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, dough.onePanels - frozenOne);
+                            {/* 총 판수 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.finalPanels}판</td>
 
-                      return (
-                        <tr key={`shake-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className="bg-sky-50/40 hover:bg-sky-50 border-b border-gray-300">
-                          <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
-                          <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
-                            <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 bg-sky-200 text-sky-950 font-bold">
-                              쉐이크
-                            </span>
-                            {row.shakeItem.product_name}
-                          </td>
+                            {/* 소분반죽 차감 반영값 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{fourVal}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{oneVal}</td>
+                            
+                            {/* 냉동생지 기입값 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
+                              {frozenFour > 0 ? `${frozenFour}` : '-'}
+                            </td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
+                              {frozenOne > 0 ? `${frozenOne}` : '-'}
+                            </td>
+                            
+                            {/* 삼각&바스콘 판수 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-amber-950 bg-amber-50">{row.sconeDoughPanels}판</td>
+                            
+                            {/* 하프팩 판수 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.hpPanels > 0 ? `${row.hpPanels}판` : '-'}</td>
+                            
+                            {/* 스틱 판수 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-blue-950 bg-blue-50">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
+                          </tr>
+                        );
+                      } else {
+                        const row = uRow.row;
+                        const dough = calculateDoughPortions(row.panels);
+                        const rowKey = `shake_${row.shakeItem.product_name}`;
+                        const currentOverrides = fieldOverrides[rowKey] || {};
+                        const frozenFour = currentOverrides.frozenFour || 0;
+                        const frozenOne = currentOverrides.frozenOne || 0;
+                        const fourVal = currentOverrides.four !== undefined ? currentOverrides.four : Math.max(0, dough.fourPanels - frozenFour);
+                        const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, dough.onePanels - frozenOne);
 
-                          {/* 총 판수 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.panels}판</td>
+                        return (
+                          <tr key={`shake-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className={`${zebraBgClass} hover:bg-sky-50/50 border-b border-gray-300`}>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
+                              <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 bg-sky-200 text-sky-950 font-bold">
+                                쉐이크
+                              </span>
+                              {row.shakeItem.product_name}
+                            </td>
 
-                          {/* 소분반죽 차감 반영값 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{fourVal}</td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{oneVal}</td>
-                          
-                          {/* 냉동생지 기입값 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
-                            {frozenFour > 0 ? `${frozenFour}` : '-'}
-                          </td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
-                            {frozenOne > 0 ? `${frozenOne}` : '-'}
-                          </td>
-                          
-                          {/* 삼각&바스콘 판수 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
-                          
-                          {/* 하프팩/쉐이크 판수 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.panels}판</td>
-                          
-                          {/* 스틱 판수 */}
-                          <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
-                        </tr>
-                      );
-                    }
-                  })}
+                            {/* 총 판수 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.panels}판</td>
+
+                            {/* 소분반죽 차감 반영값 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{fourVal}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{oneVal}</td>
+                            
+                            {/* 냉동생지 기입값 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
+                              {frozenFour > 0 ? `${frozenFour}` : '-'}
+                            </td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
+                              {frozenOne > 0 ? `${frozenOne}` : '-'}
+                            </td>
+                            
+                            {/* 삼각&바스콘 판수 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
+                            
+                            {/* 하프팩/쉐이크 판수 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.panels}판</td>
+                            
+                            {/* 스틱 판수 */}
+                            <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
+                          </tr>
+                        );
+                      }
+                    });
+                  })()}
                 </tbody>
                 <tfoot>
                   {(() => {

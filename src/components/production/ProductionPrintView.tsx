@@ -376,12 +376,12 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
             <div className="grid grid-cols-12 gap-2 mb-1.5 border border-gray-300 p-1.5 rounded bg-gray-50 text-[10px]">
               {/* Service Scone Table */}
               <div className="col-span-4 border-r border-gray-300 pr-2">
-                <div className="text-[10px] font-bold text-purple-900 mb-0.5 flex justify-between">
+                <div className="text-[10px] font-bold text-gray-900 mb-0.5 flex justify-between">
                   <span>🎁 서비스스콘 현황 표</span>
                   <span className="text-[9px] font-normal text-gray-600">삼각+스틱 남음</span>
                 </div>
-                <table className="w-full text-center border-collapse text-[10px] border border-gray-300">
-                  <thead className="bg-purple-100 text-purple-950 font-bold">
+                <table className="w-full text-center border-collapse text-[10px] border border-gray-300 bg-white">
+                  <thead className="bg-gray-100 text-gray-900 font-bold">
                     <tr>
                       <th className="border border-gray-300 py-0.5 px-1">필요량</th>
                       <th className="border border-gray-300 py-0.5 px-1">남는량</th>
@@ -406,14 +406,14 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
 
               {/* Auxiliary & Raw Material Table */}
               <div className="col-span-8 pl-1">
-                <div className="text-[10px] font-bold text-sky-950 mb-0.5 flex justify-between">
+                <div className="text-[10px] font-bold text-gray-900 mb-0.5 flex justify-between">
                   <span>📦 기타 부자재 & 원재료 집계</span>
-                  <span className="text-[10px] font-black text-amber-900">발송건수: {shipmentCount}건</span>
+                  <span className="text-[10px] font-black text-gray-900">발송건수: {shipmentCount}건</span>
                 </div>
-                <table className="w-full text-center border-collapse text-[9px] border border-gray-300">
-                  <thead className="bg-sky-100 text-sky-950 font-bold">
+                <table className="w-full text-center border-collapse text-[9px] border border-gray-300 bg-white">
+                  <thead className="bg-gray-100 text-gray-900 font-bold">
                     <tr>
-                      <th className="border border-gray-300 py-0.5 px-0.5 text-[8.5px] bg-amber-100 text-amber-950 font-black">필요 유크림</th>
+                      <th className="border border-gray-300 py-0.5 px-0.5 text-[8.5px] font-black">필요 유크림</th>
                       <th className="border border-gray-300 py-0.5 px-0.5 text-[8.5px]">그릭요거트</th>
                       <th className="border border-gray-300 py-0.5 px-0.5 text-[8.5px]">OPP</th>
                       <th className="border border-gray-300 py-0.5 px-0.5 text-[8.5px]">대파분태</th>
@@ -428,7 +428,7 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                   </thead>
                   <tbody>
                     <tr className="font-bold">
-                      <td className="border border-gray-300 py-0.5 px-0.5 bg-amber-50 text-amber-950 font-black">{heavyCreamDisplayStr}</td>
+                      <td className="border border-gray-300 py-0.5 px-0.5 font-black">{heavyCreamDisplayStr}</td>
                       <td className="border border-gray-300 py-0.5 px-0.5">{greekYogurtQty}</td>
                       <td className="border border-gray-300 py-0.5 px-0.5">{oppQty}</td>
                       <td className="border border-gray-300 py-0.5 px-0.5">{greenOnionQty}</td>
@@ -451,43 +451,43 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                 <tr className="bg-gray-100 text-gray-900 font-bold text-center border-b border-gray-300 text-[10px]">
                   <th colSpan={2} className="border border-gray-300 py-0.5 px-1 text-gray-800 whitespace-nowrap text-center">오븐</th>
                   <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">제품명</th>
-                  <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center bg-emerald-200 text-emerald-950 font-black text-xs whitespace-nowrap">총 판수</th>
+                  <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center font-black text-xs whitespace-nowrap">총 판수</th>
 
                   {/* Group 1: 삼각&바스콘 */}
-                  <th colSpan={showRequiredQty ? 7 : 6} className="border border-gray-300 py-0.5 px-1 bg-amber-100 text-amber-950 font-black whitespace-nowrap text-center">
+                  <th colSpan={showRequiredQty ? 7 : 6} className="border border-gray-300 py-0.5 px-1 font-black whitespace-nowrap text-center">
                     삼각&바스콘
                   </th>
 
                   {/* Group 2: 하프팩&미니쉐이크 */}
-                  <th colSpan={3} className="border border-gray-300 py-0.5 px-1 bg-purple-100 text-purple-950 font-black whitespace-nowrap text-center">
+                  <th colSpan={3} className="border border-gray-300 py-0.5 px-1 font-black whitespace-nowrap text-center">
                     하프팩&미니쉐이크
                   </th>
 
                   {/* Group 3: 스틱스콘 */}
-                  <th colSpan={2} className="border border-gray-300 py-0.5 px-1 bg-blue-100 text-blue-950 font-black whitespace-nowrap text-center">
+                  <th colSpan={2} className="border border-gray-300 py-0.5 px-1 font-black whitespace-nowrap text-center">
                     스틱스콘
                   </th>
                 </tr>
                 <tr className="bg-gray-100 text-gray-900 font-bold text-[9px] text-center border-b border-gray-300">
                   <th className="border border-gray-300 p-0.5 text-center whitespace-nowrap">삼각/바</th>
-                  <th className="border border-gray-300 p-0.5 text-center text-purple-900 whitespace-nowrap">스틱/큐브</th>
+                  <th className="border border-gray-300 p-0.5 text-center whitespace-nowrap">스틱/큐브</th>
 
                   {/* Sub-headers for 삼각&바스콘 */}
                   <th className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">주문량</th>
                   <th className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">추가량</th>
-                  {showRequiredQty && <th className="border border-gray-300 py-0.5 px-1 text-center bg-gray-50 text-gray-800 whitespace-nowrap">필요량</th>}
+                  {showRequiredQty && <th className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">필요량</th>}
                   <th className="border border-gray-300 py-0.5 px-1 text-center text-gray-600 whitespace-nowrap">이월재고</th>
-                  <th className="border border-gray-300 py-0.5 px-1 text-center bg-amber-50 text-amber-950 font-bold whitespace-nowrap">생산량</th>
-                  <th className="border border-gray-300 py-0.5 px-1 text-center bg-amber-100 text-amber-950 font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
+                  <th className="border border-gray-300 py-0.5 px-1 text-center font-bold whitespace-nowrap">생산량</th>
+                  <th className="border border-gray-300 py-0.5 px-1 text-center font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
                   <th className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">남는량(개)</th>
 
                   {/* Sub-headers for 하프팩&미니쉐이크 */}
-                  <th className="border border-gray-300 py-0.5 px-1 text-center bg-purple-50 text-purple-900 whitespace-nowrap">주문량(봉)</th>
-                  <th className="border border-gray-300 py-0.5 px-1 text-center bg-purple-100 text-purple-950 font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
-                  <th className="border border-gray-300 py-0.5 px-1 text-center bg-sky-50 text-sky-900 whitespace-nowrap">남는량(봉)</th>
+                  <th className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">주문량(봉)</th>
+                  <th className="border border-gray-300 py-0.5 px-1 text-center font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
+                  <th className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">남는량(봉)</th>
 
                   {/* Sub-headers for 스틱스콘 */}
-                  <th className="border border-gray-300 py-0.5 px-1 text-center bg-blue-100 text-blue-950 font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
+                  <th className="border border-gray-300 py-0.5 px-1 text-center font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
                   <th className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">남는량(팩)</th>
                 </tr>
               </thead>
@@ -511,39 +511,39 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                       const secOven = row.matchedHp?.oven_number || row.matchedStick?.oven_number;
                       const isBar = row.sconeItem.category === '바';
                       return (
-                        <tr key={`scone-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className={`${zebraBgClass} hover:bg-amber-50/30 border-b border-gray-300`}>
+                        <tr key={`scone-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
                           <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{row.sconeItem.oven_number || '1'}</td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900">{secOven || '-'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{secOven || '-'}</td>
                           <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
-                            <span className={`inline-block px-1 py-0 rounded text-[9px] mr-1 ${isBar ? 'bg-orange-100 text-orange-900' : 'bg-amber-100 text-amber-900'}`}>
+                            <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 border border-gray-400 font-semibold text-gray-800">
                               {isBar ? '바' : '삼각'}
                             </span>
                             {row.sconeItem.product_name}
                           </td>
 
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.finalPanels}판</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-gray-950">{row.finalPanels}판</td>
 
                           <td className="border border-gray-300 py-0.5 px-1 text-right text-[10px]">{row.sconeItem.order_qty}개</td>
                           <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.sconeItem.extra_qty ? `${row.sconeItem.extra_qty}개` : '-'}</td>
-                          {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 bg-gray-50/80 text-[10px]">{row.sconeItem.required_qty}개</td>}
+                          {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 text-[10px]">{row.sconeItem.required_qty}개</td>}
                           <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.sconeItem.carryover_qty ? `${row.sconeItem.carryover_qty}개` : '-'}</td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900 bg-amber-50/50 text-[10px]">{row.sconeItem.production_qty}개</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900 text-[10px]">{row.sconeItem.production_qty}개</td>
                           
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-amber-950 bg-amber-50">{row.sconeDoughPanels}판</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">{row.sconeDoughPanels}판</td>
                           
-                          <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.excessQty > 0 ? 'text-blue-700 bg-blue-50/60' : 'text-gray-400'}`}>
+                          <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.excessQty > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
                             {row.excessQty > 0 ? `${row.excessQty}개` : '-'}
                           </td>
 
-                          <td className="border border-gray-300 py-0.5 px-1 text-right text-purple-900 text-[10px]">{row.hpOrderBags > 0 ? `${row.hpOrderBags}봉` : '-'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-900 text-[10px]">{row.hpOrderBags > 0 ? `${row.hpOrderBags}봉` : '-'}</td>
                           
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.hpPanels > 0 ? `${row.hpPanels}판` : '-'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">{row.hpPanels > 0 ? `${row.hpPanels}판` : '-'}</td>
                           
                           <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
 
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-blue-950 bg-blue-50">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
                           
-                          <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.stickExcessPacks > 0 ? 'text-indigo-700 bg-indigo-50/60' : 'text-gray-400'}`}>
+                          <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.stickExcessPacks > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
                             {row.stickExcessPacks > 0 ? `${row.stickExcessPacks}팩` : '-'}
                           </td>
                         </tr>
@@ -551,33 +551,33 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                     } else {
                       const row = uRow.row;
                       return (
-                        <tr key={`shake-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className={`${zebraBgClass} hover:bg-sky-50/50 border-b border-gray-300`}>
+                        <tr key={`shake-${idx}`} style={{ height: `${pageStyles.p1.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
                           <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
                           <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
-                            <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 bg-sky-200 text-sky-950 font-bold">
+                            <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 border border-gray-400 font-semibold text-gray-800">
                               쉐이크
                             </span>
                             {row.shakeItem.product_name}
                           </td>
 
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.panels}판</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-gray-950">{row.panels}판</td>
 
                           <td className="border border-gray-300 py-0.5 px-1 text-right text-[10px]">{row.orderBags}봉</td>
                           <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.extraBags ? `${row.extraBags}봉` : '-'}</td>
-                          {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 bg-gray-50/80 text-[10px]">{row.orderBags + row.extraBags}봉</td>}
+                          {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-800 text-[10px]">{row.orderBags + row.extraBags}봉</td>}
                           <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-500 text-[10px]">{row.carryoverBags ? `${row.carryoverBags}봉` : '-'}</td>
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900 bg-amber-50/50 text-[10px]">{row.prodBags}봉</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900 text-[10px]">{row.prodBags}봉</td>
                           
                           <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
                           
                           <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
 
-                          <td className="border border-gray-300 py-0.5 px-1 text-right text-purple-900 text-[10px]">{row.prodBags}봉</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right text-gray-900 text-[10px]">{row.prodBags}봉</td>
                           
-                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.panels}판</td>
+                          <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">{row.panels}판</td>
                           
-                          <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.excessBags > 0 ? 'text-sky-700 bg-sky-100' : 'text-gray-400'}`}>
+                          <td className={`border border-gray-300 py-0.5 px-1 text-right font-bold text-[10px] ${row.excessBags > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
                             {row.excessBags > 0 ? `${row.excessBags}봉` : '-'}
                           </td>
 
@@ -593,7 +593,7 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
               <tfoot>
                 <tr className="bg-gray-100 font-bold border-t-2 border-gray-400 text-[10px]">
                   <td colSpan={3} className="border border-gray-300 py-0.5 px-1 text-center font-black">전체 총 합계</td>
-                  <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-sm text-emerald-950 bg-emerald-200">
+                  <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-sm text-gray-950">
                     {grandTotalAllPanels} 판
                   </td>
                   {/* 삼각스콘 합계 */}
@@ -602,7 +602,7 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                   {showRequiredQty && <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>}
                   <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
                   <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
-                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-amber-950 bg-amber-100">
+                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">
                     {roundHalf(combinedTriangleRows.reduce((a, r) => a + r.sconeDoughPanels, 0) + combinedBarRows.reduce((a, r) => a + r.sconeDoughPanels, 0))}판
                   </td>
                   <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900">
@@ -611,18 +611,18 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
 
                   {/* 미니큐브 합계 */}
                   <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
-                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-100">
+                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">
                     {roundHalf(items.filter(i => i.category === '미니큐브').reduce((a, i) => a + i.order_qty, 0) / 2.0 + totalMiniShakePanels)}판
                   </td>
-                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-sky-950">
+                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-950">
                     {combinedMiniShakeRows.reduce((a, r) => a + r.excessBags, 0)}봉
                   </td>
 
                   {/* 스틱스콘 합계 */}
-                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-blue-950 bg-blue-100">
+                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">
                     {combinedTriangleRows.reduce((a, r) => a + r.stickPanels, 0)}판
                   </td>
-                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-indigo-900">
+                  <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-gray-900">
                     {combinedTriangleRows.reduce((a, r) => a + r.stickExcessPacks, 0)}팩
                   </td>
                 </tr>
@@ -693,12 +693,12 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
               </div>
               <table className="print-table-p2 w-full text-center border-collapse border border-gray-300" style={{ fontSize: `${FIXED_FONT_SIZE}px` }}>
                 <thead>
-                  <tr className="bg-gray-100 font-extrabold border-b border-gray-300">
+                  <tr className="bg-gray-100 text-gray-900 font-extrabold border-b border-gray-300">
                     <th className="border border-gray-300 p-1 text-left">상품명</th>
                     <th className="border border-gray-300 p-1 w-20">오븐번호</th>
-                    <th className="border border-gray-300 p-1 w-24 bg-amber-100">삼각(바)판수</th>
-                    <th className="border border-gray-300 p-1 w-24 bg-indigo-100">풀팬(3판)</th>
-                    <th className="border border-gray-300 p-1 w-28 bg-sky-100">남는 반죽 판수</th>
+                    <th className="border border-gray-300 p-1 w-24">삼각(바)판수</th>
+                    <th className="border border-gray-300 p-1 w-24">풀팬(3판)</th>
+                    <th className="border border-gray-300 p-1 w-28">남는 반죽 판수</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -717,20 +717,20 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                       const zebraBgClass = isZebra ? 'bg-[#eef2f7] print:bg-[#eef2f7]' : 'bg-white print:bg-white';
 
                       return (
-                        <tr key={`ob-print-${obRow.product_name}-${obIdx}`} style={{ height: `${pageStyles.p2.rowHeight}px` }} className={`${zebraBgClass} hover:bg-purple-50/40 border-b border-gray-300`}>
+                        <tr key={`ob-print-${obRow.product_name}-${obIdx}`} style={{ height: `${pageStyles.p2.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
                           <td className="border border-gray-300 py-0.5 px-1 text-left font-bold text-gray-900">
                             {obRow.product_name}
                           </td>
                           <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-800">
                             {obRow.oven_number}
                           </td>
-                          <td className="border border-gray-300 py-0.5 px-1 font-black text-amber-950 bg-amber-50">
+                          <td className="border border-gray-300 py-0.5 px-1 font-black text-gray-950">
                             {obRow.total_panels}
                           </td>
-                          <td className="border border-gray-300 py-0.5 px-1 font-black text-indigo-950 bg-indigo-50 text-sm">
+                          <td className="border border-gray-300 py-0.5 px-1 font-black text-gray-950 text-sm">
                             {obRow.full_pans}
                           </td>
-                          <td className="border border-gray-300 py-0.5 px-1 font-black text-sky-950 bg-sky-50 text-sm">
+                          <td className="border border-gray-300 py-0.5 px-1 font-black text-gray-950 text-sm">
                             {obRow.remainder_panels}
                           </td>
                         </tr>
@@ -816,39 +816,39 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                   <tr className="bg-gray-100 text-gray-900 font-bold text-center border-b border-gray-300 text-[10px]">
                     <th colSpan={2} className="border border-gray-300 py-0.5 px-1 text-gray-800 whitespace-nowrap text-center">오븐</th>
                     <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">제품명</th>
-                    <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center bg-emerald-200 text-emerald-950 font-black text-xs whitespace-nowrap">총 판수</th>
-                    <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center bg-amber-50 text-amber-950 font-bold whitespace-nowrap">소분반죽(4판)</th>
-                    <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center bg-amber-50 text-amber-950 font-bold whitespace-nowrap">소분반죽(1판)</th>
+                    <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center font-black text-xs whitespace-nowrap">총 판수</th>
+                    <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center font-bold whitespace-nowrap">소분반죽(4판)</th>
+                    <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center font-bold whitespace-nowrap">소분반죽(1판)</th>
                     <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">냉동생지(4판)</th>
                     <th rowSpan={2} className="border border-gray-300 py-0.5 px-1 text-center whitespace-nowrap">냉동생지(1판)</th>
 
                     {/* Group 1: 삼각&바스콘 (1 column) */}
-                    <th colSpan={1} className="border border-gray-300 py-0.5 px-1 bg-amber-100 text-amber-950 font-black whitespace-nowrap text-center">
+                    <th colSpan={1} className="border border-gray-300 py-0.5 px-1 font-black whitespace-nowrap text-center">
                       삼각&바스콘
                     </th>
 
                     {/* Group 2: 하프팩&미니쉐이크 (1 column) */}
-                    <th colSpan={1} className="border border-gray-300 py-0.5 px-1 bg-purple-100 text-purple-950 font-black whitespace-nowrap text-center">
+                    <th colSpan={1} className="border border-gray-300 py-0.5 px-1 font-black whitespace-nowrap text-center">
                       하프팩&미니쉐이크
                     </th>
 
                     {/* Group 3: 스틱스콘 (1 column) */}
-                    <th colSpan={1} className="border border-gray-300 py-0.5 px-1 bg-blue-100 text-blue-950 font-black whitespace-nowrap text-center">
+                    <th colSpan={1} className="border border-gray-300 py-0.5 px-1 font-black whitespace-nowrap text-center">
                       스틱스콘
                     </th>
                   </tr>
                   <tr className="bg-gray-100 text-gray-900 font-bold text-[9px] text-center border-b border-gray-300">
                     <th className="border border-gray-300 p-0.5 text-center whitespace-nowrap">삼각/바</th>
-                    <th className="border border-gray-300 p-0.5 text-center text-purple-900 whitespace-nowrap">스틱/큐브</th>
+                    <th className="border border-gray-300 p-0.5 text-center whitespace-nowrap">스틱/큐브</th>
 
                     {/* Sub-header for 삼각&바스콘 */}
-                    <th className="border border-gray-300 py-0.5 px-1 text-center bg-amber-100 text-amber-950 font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
+                    <th className="border border-gray-300 py-0.5 px-1 text-center font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
 
                     {/* Sub-header for 하프팩&미니쉐이크 */}
-                    <th className="border border-gray-300 py-0.5 px-1 text-center bg-purple-100 text-purple-950 font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
+                    <th className="border border-gray-300 py-0.5 px-1 text-center font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
 
                     {/* Sub-header for 스틱스콘 */}
-                    <th className="border border-gray-300 py-0.5 px-1 text-center bg-blue-100 text-blue-950 font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
+                    <th className="border border-gray-300 py-0.5 px-1 text-center font-extrabold text-[10.5px] whitespace-nowrap">판수</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-300">
@@ -879,22 +879,22 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                         const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, dough.onePanels - frozenOne);
 
                         return (
-                          <tr key={`scone-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className={`${zebraBgClass} hover:bg-amber-50/30 border-b border-gray-300`}>
+                          <tr key={`scone-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
                             <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{row.sconeItem.oven_number || '1'}</td>
-                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900">{secOven || '-'}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{secOven || '-'}</td>
                             <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
-                              <span className={`inline-block px-1 py-0 rounded text-[9px] mr-1 ${isBar ? 'bg-orange-100 text-orange-900' : 'bg-amber-100 text-amber-900'}`}>
+                              <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 border border-gray-400 font-semibold text-gray-800">
                                 {isBar ? '바' : '삼각'}
                               </span>
                               {row.sconeItem.product_name}
                             </td>
 
                             {/* 총 판수 */}
-                            <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.finalPanels}판</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-gray-950">{row.finalPanels}판</td>
 
                             {/* 소분반죽 차감 반영값 */}
-                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{fourVal}</td>
-                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{oneVal}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-gray-950">{fourVal}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-gray-950">{oneVal}</td>
                             
                             {/* 냉동생지 기입값 */}
                             <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
@@ -905,13 +905,13 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                             </td>
                             
                             {/* 삼각&바스콘 판수 */}
-                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-amber-950 bg-amber-50">{row.sconeDoughPanels}판</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">{row.sconeDoughPanels}판</td>
                             
                             {/* 하프팩 판수 */}
-                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.hpPanels > 0 ? `${row.hpPanels}판` : '-'}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">{row.hpPanels > 0 ? `${row.hpPanels}판` : '-'}</td>
                             
                             {/* 스틱 판수 */}
-                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-blue-950 bg-blue-50">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">{row.stickPanels > 0 ? `${row.stickPanels}판` : '-'}</td>
                           </tr>
                         );
                       } else {
@@ -925,22 +925,22 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                         const oneVal = currentOverrides.one !== undefined ? currentOverrides.one : Math.max(0, dough.onePanels - frozenOne);
 
                         return (
-                          <tr key={`shake-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className={`${zebraBgClass} hover:bg-sky-50/50 border-b border-gray-300`}>
+                          <tr key={`shake-blank-${idx}`} style={{ height: `${pageStyles.p3.rowHeight}px` }} className={`${zebraBgClass} hover:bg-gray-100/50 border-b border-gray-300`}>
                             <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400 text-[10px]">-</td>
-                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-purple-900 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800 text-[10px]">{row.shakeItem.oven_number || '1'}</td>
                             <td className="border border-gray-300 py-0.5 px-1 font-bold text-gray-900 whitespace-nowrap text-[10px]">
-                              <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 bg-sky-200 text-sky-950 font-bold">
+                              <span className="inline-block px-1 py-0 rounded text-[9px] mr-1 border border-gray-400 font-semibold text-gray-800">
                                 쉐이크
                               </span>
                               {row.shakeItem.product_name}
                             </td>
 
                             {/* 총 판수 */}
-                            <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-emerald-950 bg-emerald-100">{row.panels}판</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-xs text-gray-950">{row.panels}판</td>
 
                             {/* 소분반죽 차감 반영값 */}
-                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{fourVal}</td>
-                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-amber-950 bg-amber-50/70">{oneVal}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-gray-950">{fourVal}</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-[11px] text-gray-950">{oneVal}</td>
                             
                             {/* 냉동생지 기입값 */}
                             <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">
@@ -954,7 +954,7 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                             <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
                             
                             {/* 하프팩/쉐이크 판수 */}
-                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-50">{row.panels}판</td>
+                            <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">{row.panels}판</td>
                             
                             {/* 스틱 판수 */}
                             <td className="border border-gray-300 py-0.5 px-1 text-center text-gray-400">-</td>
@@ -1000,20 +1000,20 @@ export const ProductionPrintView: React.FC<ProductionPrintViewProps> = ({
                     return (
                       <tr className="bg-gray-100 font-bold border-t-2 border-gray-400 text-[10px]">
                         <td colSpan={3} className="border border-gray-300 py-0.5 px-1 text-center font-black">전체 총 합계</td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-sm text-emerald-950 bg-emerald-200">
+                        <td className="border border-gray-300 py-0.5 px-1 text-right font-black text-sm text-gray-950">
                           {grandTotalAllPanels} 판
                         </td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-amber-950 bg-amber-100">{totalFour}</td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-amber-950 bg-amber-100">{totalOne}</td>
+                        <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-gray-950">{totalFour}</td>
+                        <td className="border border-gray-300 py-0.5 px-1 text-center font-black text-gray-950">{totalOne}</td>
                         <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{totalFrozenFour > 0 ? totalFrozenFour : '-'}</td>
                         <td className="border border-gray-300 py-0.5 px-1 text-center font-bold text-gray-800">{totalFrozenOne > 0 ? totalFrozenOne : '-'}</td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-amber-950 bg-amber-100">
+                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">
                           {roundHalf(combinedTriangleRows.reduce((a, r) => a + r.sconeDoughPanels, 0) + combinedBarRows.reduce((a, r) => a + r.sconeDoughPanels, 0))}판
                         </td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-purple-950 bg-purple-100">
+                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">
                           {roundHalf(items.filter(i => i.category === '미니큐브').reduce((a, i) => a + i.order_qty, 0) / 2.0 + totalMiniShakePanels)}판
                         </td>
-                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-blue-950 bg-blue-100">
+                        <td className="border border-gray-300 py-0.5 px-1 text-right font-bold text-[11px] text-gray-950">
                           {combinedTriangleRows.reduce((a, r) => a + r.stickPanels, 0)}판
                         </td>
                       </tr>
